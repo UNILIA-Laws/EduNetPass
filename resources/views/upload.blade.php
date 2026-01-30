@@ -70,17 +70,33 @@
                         <li class="mb-2"><i class="fa-solid fa-check-circle text-success me-2"></i>Register devices for WPA2-Enterprise</li>
                     </ul>
 
-                    <div class="csv-helper mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <div class="fw-bold text-dark small"><i class="fa-solid fa-circle-info me-1"></i> Required CSV Format:</div>
-                           <div class="mb-4 text-center">
-                                <a href="{{ route('download.sample') }}" class="btn btn-outline-primary">
-                                    <i class="fa-solid fa-file-csv me-2"></i> Download Sample CSV
-                                </a>
+                    <div class="csv-helper mt-4 shadow-sm border-0 bg-white p-3 rounded-4">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-box bg-warning bg-opacity-10 text-warning rounded-circle p-2 me-3">
+                                    <i class="fa-solid fa-file-csv fs-5"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold text-dark">CSV Configuration</h6>
+                                    <small class="text-muted">Required column mapping</small>
+                                </div>
                             </div>
-
+                            <a href="{{ route('download.sample') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                                <i class="fa-solid fa-download me-1"></i> Sample CSV
+                            </a>
                         </div>
-                        <code>name, email, student_id, department</code>
+
+                        <div class="bg-light p-3 rounded-3 border">
+                            <div class="d-flex justify-content-between small text-uppercase text-muted fw-bold mb-2" style="font-size: 0.65rem; letter-spacing: 1px;">
+                                <span>Structure</span>
+                                <span class="text-primary">Header Row Required</span>
+                            </div>
+                            <code class="text-primary fw-bold" style="font-size: 0.9rem;">name, email, student_id, department</code>
+                        </div>
+                        
+                        <p class="mb-0 mt-2 text-muted" style="font-size: 0.75rem;">
+                            <i class="fa-solid fa-circle-exclamation me-1"></i> Ensure emails are valid institution addresses.
+                        </p>
                     </div>
                 </div>
 
@@ -102,7 +118,7 @@
                                 <div class="row g-2 mb-4">
                                     <div class="col-6">
                                         <div class="p-3 border rounded text-center bg-light">
-                                            <div class="small text-muted text-uppercase">Provisioned</div>
+                                            <div class="small text-muted text-uppercase">Sent</div>
                                             <div class="h4 fw-bold text-success mb-0">{{ session('report.sent') }}</div>
                                         </div>
                                     </div>

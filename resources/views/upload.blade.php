@@ -73,9 +73,12 @@
                     <div class="csv-helper mt-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div class="fw-bold text-dark small"><i class="fa-solid fa-circle-info me-1"></i> Required CSV Format:</div>
-                            <a href="{{ asset('samples/student_template.csv') }}" class="btn-sample">
-                                <i class="fa-solid fa-download me-1"></i> Sample CSV
-                            </a>
+                           <div class="mb-4 text-center">
+                                <a href="{{ route('download.sample') }}" class="btn btn-outline-primary">
+                                    <i class="fa-solid fa-file-csv me-2"></i> Download Sample CSV
+                                </a>
+                            </div>
+
                         </div>
                         <code>name, email, student_id, department</code>
                     </div>

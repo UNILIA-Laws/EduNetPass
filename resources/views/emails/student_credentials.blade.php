@@ -1,13 +1,20 @@
-<p>Dear {{ $student['givenName'] }} {{ $student['sn'] }},</p>
+<p>Dear {{ $student['givenName'] }} {{ $student['sn'] }}, ({{ $student['Reg'] }})</p>
 
-<p>Your system login details are:</p>
+<p>Your <strong>eduroam</strong> login details have been generated. Please use the credentials below to access the network:</p>
 
 <ul>
-    <li><strong>Registration Number:</strong> {{ $student['Reg'] }}</li>
-    <li><strong>Username (UID):</strong> {{ $student['uid'] }}</li>
+    <li><strong>eduroam Identity (UID):</strong> {{ $student['uid'] }}</li>
     <li><strong>Password:</strong> {{ $student['userPassword'] }}</li>
 </ul>
 
-<p>Please change your password after first login.</p>
+<p><strong>⚠️ Security Notice:</strong> For security reasons, please <strong>do not share these credentials</strong> with anyone else. Your account is for your personal use only.</p>
 
-<p>Regards,<br>UNILIA ICT Team</p>
+<p>Please find the attached <strong>User Guide</strong> for setup instructions. If you encounter any issues, please contact the <strong>ICT Office</strong>:</p>
+
+<ul>
+    <li><strong>Email:</strong> ictlaws@unilia.ac.mw</li>
+    <li><strong>Phone:</strong> +265 882 795 006</li>
+</ul>
+
+<p>Regards,<br>
+Laws Campus ICT Team</p>

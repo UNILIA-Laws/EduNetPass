@@ -11,3 +11,4 @@ Route::get('/', function () {
 
 Route::get('/', [CsvUploadController::class, 'showForm']);
 Route::post('/upload-csv', [CsvUploadController::class, 'upload'])->name('upload.csv');
+Route::get('/download-sample-csv', [CsvUploadController::class, 'downloadSample'])->name('download.sample');

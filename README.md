@@ -13,8 +13,6 @@ Built with Laravel/PHP, this system streamlines the process of generating and di
 
 - [Features](#features)  
 - [Workflow](#workflow)  
-- [Installation](#installation)  
-
 
 ---
 

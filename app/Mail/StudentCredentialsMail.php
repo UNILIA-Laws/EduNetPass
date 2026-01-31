@@ -20,7 +20,6 @@ class StudentCredentialsMail extends Mailable
     public function build()
     {
         return $this->subject('Eduroam Login Credentials')
-        ->attach(storage_path('app/public/Eduroam user guide-Laws Campus.pdf'))
             ->view('emails.student_credentials');
     }
 }

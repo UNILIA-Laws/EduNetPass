@@ -1,20 +1,27 @@
-<p>Dear {{ $student['givenName'] }} {{ $student['sn'] }}, ({{ $student['Reg'] }})</p>
+<p>Dear {{ $student['givenName'] }} {{ $student['sn'] }} ({{ $student['Reg'] }}),</p>
 
-<p>Your <strong>eduroam</strong> login details have been generated. Please use the credentials below to access the network:</p>
+<p>Good news! Your <strong>eduroam</strong> account is ready. You can now use it to connect to the <strong>school Wi-Fi</strong>.</p>
 
 <ul>
-    <li><strong>eduroam Identity (UID):</strong> {{ $student['uid'] }}</li>
+    <li><strong>Username (UID):</strong> {{ $student['uid'] }}</li>
     <li><strong>Password:</strong> {{ $student['userPassword'] }}</li>
 </ul>
 
-<p><strong>⚠️ Security Notice:</strong> For security reasons, please <strong>do not share these credentials</strong> with anyone else. Your account is for your personal use only.</p>
+<p><strong>Important:</strong> <strong>eduroam is the official way to access the University Wi-Fi</strong> on campus. Please use these details whenever you want to connect to the school network.</p>
 
-<p>Please find the attached <strong>User Guide</strong> for setup instructions. If you encounter any issues, please contact the <strong>ICT Office</strong>:</p>
+<p><strong>Security Tip:</strong> Keep your login details private and do not share them with anyone.</p>
 
-<ul>
-    <li><strong>Email:</strong> ictlaws@unilia.ac.mw</li>
-    <li><strong>Phone:</strong> +265 882 795 006</li>
-</ul>
+<p>To help you get connected, please follow the steps in the eduroam User Guide:</p>
+
+<p>
+<a href="https://drive.google.com/file/d/1QMoFtIgeQ5BkuOZ9qdEE1jMlTdfMjOTW/view?usp=sharing">
+Download eduroam User Guide
+</a>
+</p>
+
+<p>If you need help, feel free to contact the <strong>ICT Office</strong>:<br>
+Email: ictlaws@unilia.ac.mw<br>
+Phone: +265 882 795 006</p>
 
 <p>Regards,<br>
 Laws Campus ICT Team</p>

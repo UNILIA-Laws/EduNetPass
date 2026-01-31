@@ -17,6 +17,9 @@ class CsvUploadController extends Controller
 
     public function upload(Request $request)
     {
+
+        set_time_limit(1200);
+
         $request->validate([
             'csv_file' => 'required|file|mimes:csv,txt'
         ]);

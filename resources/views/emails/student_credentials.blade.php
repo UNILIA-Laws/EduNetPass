@@ -1,4 +1,4 @@
-<p>Dear {{ $student['givenName'] }} {{ $student['sn'] }} ({{ $student['Reg'] }}),</p>
+<p>Dear {{ $student['givenName'] }} {{ $student['sn'] }}@if(!empty($student['Reg'])) ({{ $student['Reg'] }})@endif,</p>
 
 <p>Good news! Your <strong>eduroam</strong> account is ready. You can now use it to connect to the <strong>school Wi-Fi</strong>.</p>
 

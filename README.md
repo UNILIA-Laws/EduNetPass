@@ -1,37 +1,29 @@
-# UNILIA Eduroam Credential Delivery System
+# UNILIA Eduroam Provisioning Portal
 
-[![Laravel](https://img.shields.io/badge/Laravel-10.x-red.svg)](https://laravel.com)  
-[![PHP](https://img.shields.io/badge/PHP-8.1+-blue.svg)](https://www.php.net)  
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+Laravel web app for ICT staff to create eduroam accounts in LDAP and e-mail the credentials to students.
 
-**Automated system for sending Eduroam credentials to UNILIA students after they are added to the LDAP directory.**  
-Built with Laravel/PHP, this system streamlines the process of generating and distributing network credentials, ensuring timely access for students while reducing manual workload for ICT staff.
+* **Bulk upload** – CSV or Excel (`givenName, sn, Reg, mail, uid, userPassword`)
+* **Single student** – web form
+* For each student: create/update in LDAP → e-mail credentials (only if LDAP succeeded) → per-student result table
+* Bulk runs also e-mail a log (no passwords) to `PROVISIONING_LOG_EMAIL`
+* Login required (staff accounts live in the `users` table)
 
----
+## Setup
 
-## Table of Contents
+```bash
+composer install
+composer require phpoffice/phpspreadsheet      # only needed for .xlsx uploads
+cp .env.example .env && php artisan key:generate
+# edit .env: LDAP_BIND_PASSWORD, MAIL_* , APP_URL
+php artisan migrate
+php artisan eduroam:make-admin ict@unilia.ac.mw   # creates a login
+php artisan serve            # or point Apache/Nginx at /public
+```
 
-- [Features](#features)  
-- [Workflow](#workflow)  
+Requirements: PHP 8.2+ with the **ldap** extension (`sudo apt install php-ldap`, then restart PHP/Apache).
 
----
+## Adding a campus
+Add an entry to `campuses` in `config/ldap.php`; it appears in the Campus dropdown.
 
-## Features
-
-- **Email Notifications** – Sends credentials securely to students via email immediately after creation.  
-- **Logging & Auditing** – Tracks all actions including credential generation, email delivery status, and errors.  
-- **Error Handling** – Graceful exception handling ensures that failed deliveries are logged and retried.  
-- **Secure Storage** – Temporary credentials are handled securely in compliance with best practices.  
-
----
-
-## Workflow
-
-```mermaid
-flowchart LR
-    A[New student added to LDAP] --> B[Generate Eduroam credentials]
-    B --> C[Send email to student]
-    B --> D[Log actions and errors]
-    C --> E[Student receives credentials]
-    D --> F[ICT staff monitors logs]
-
+## Tests
+`php artisan test` (LDAP and mail are faked, no server needed).

@@ -23,13 +23,25 @@ return [
     */
     'people_dn' => env('LDAP_PEOPLE_DN', 'ou=people,dc=unilia,dc=ac,dc=mw'),
 
-    // Campuses shown in the "Campus" dropdown. key => [label, eduPersonOrgUnitDN]
+   // Campuses shown in the "Campus" dropdown. key => [label, eduPersonOrgUnitDN]
+
     'campuses' => [
+
         'laws' => [
             'label' => 'Laws Campus',
             'dn'    => 'ou=laws,ou=campuses,dc=unilia,dc=ac,dc=mw',
         ],
-        // 'chanco' => ['label' => 'Chancellor College', 'dn' => 'ou=chanco,ou=campuses,dc=unilia,dc=ac,dc=mw'],
+
+        'ekwendeni' => [
+            'label' => 'Ekwendeni Campus',
+            'dn'    => 'ou=ekwendeni,ou=campuses,dc=unilia,dc=ac,dc=mw',
+        ],
+
+        'kaningina' => [
+            'label' => 'Kaningina Campus',
+            'dn'    => 'ou=kaningina,ou=campuses,dc=unilia,dc=ac,dc=mw',
+        ],
+
     ],
 
     'entitlements' => [

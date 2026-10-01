@@ -34,7 +34,9 @@
             <a href="{{ url('/') }}" class="navbar-brand-custom"><i class="fa-solid fa-wifi me-2"></i>Laws Eduroam</a>
         </div>
         @auth
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2 gap-md-3">
+                <a href="{{ route('home') }}" class="btn btn-sm {{ request()->routeIs('home') ? 'btn-eduroam' : 'btn-outline-secondary' }} rounded-pill px-3"><i class="fa-solid fa-user-plus me-1"></i>Add students</a>
+                <a href="{{ route('users.index') }}" class="btn btn-sm {{ request()->routeIs('users.index', 'users.edit') ? 'btn-eduroam' : 'btn-outline-secondary' }} rounded-pill px-3"><i class="fa-solid fa-users me-1"></i>Users</a>
                 <small class="text-muted d-none d-md-block"><i class="fa-solid fa-user-shield me-1"></i>{{ auth()->user()->email }}</small>
                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
@@ -48,6 +50,7 @@
 @yield('content')
 
 <p class="text-center text-muted my-4" style="font-size: 0.75rem;">UNILIA Eduroam Portal &copy; {{ date('Y') }}. All rights reserved.</p>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 @stack('scripts')
 </body>
 </html>

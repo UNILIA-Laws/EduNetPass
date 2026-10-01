@@ -41,4 +41,11 @@ return [
     'log_recipient' => env('PROVISIONING_LOG_EMAIL', 'ictlaws@unilia.ac.mw'),
 
     'max_rows_per_upload' => 2000,
+
+
+     
+    'max_list' => 5000,
+    'per_page' => 25,
+
+    'page_size' => 500,
 ];

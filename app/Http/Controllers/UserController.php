@@ -161,4 +161,20 @@ class UserController extends Controller
         }
         return null;
     }
+
+
+    public function destroy(Request $request, string $uid)
+    {
+        $this->findOrFail($uid);
+
+        try {
+            $this->ldap->deleteStudent($uid);
+        } catch (Throwable $e) {
+            return back()->withErrors(['ldap' => $e->getMessage()]);
+        }
+
+        Log::info('eduroam.user deleted', ['uid' => $uid, 'by' => $request->user()?->email]);
+
+        return back()->with('status', "User {$uid} deleted.");
+    }
 }

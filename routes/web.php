@@ -21,6 +21,7 @@ Route::middleware('auth')->group(function () {
     $uid = '[A-Za-z0-9][A-Za-z0-9._-]{0,63}';
     Route::get('/users', [UserController::class, 'index'])->name('users.index');
     Route::get('/users/{uid}/edit', [UserController::class, 'edit'])->where('uid', $uid)->name('users.edit');
+    Route::delete('/users/{uid}', [UserController::class, 'destroy'])->where('uid', $uid)->name('users.destroy');
     Route::put('/users/{uid}', [UserController::class, 'update'])->where('uid', $uid)->name('users.update');
     Route::post('/users/{uid}/reset-password', [UserController::class, 'resetPassword'])->where('uid', $uid)->name('users.reset');
 

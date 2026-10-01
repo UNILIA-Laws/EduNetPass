@@ -3,7 +3,7 @@
 
 @section('content')
 <style>
-    .usr {
+    .usr, .usr-modal {
         --ink: #172033;
         --muted: #667085;
         --line: #E3E8F0;
@@ -15,9 +15,11 @@
         --warn: #A8620B;  --warn-soft: #FDF1DF;
         --bad: #C93A3A;   --bad-soft: #FCE9E9;
         --idle-soft: #EEF1F5;
-        background: var(--canvas);
         color: var(--ink);
         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .usr {
+        background: var(--canvas);
         padding: 2rem 0 3rem;
     }
     .usr :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -76,11 +78,13 @@
         background: #F7F9FC; text-align: left; font-weight: 600; font-size: .78rem; color: var(--muted);
         padding: .65rem 1.1rem; border-bottom: 1px solid var(--line); white-space: nowrap;
     }
-    .tbl td { padding: .75rem 1.1rem; border-bottom: 1px solid #EEF1F6; vertical-align: middle; }
+    .tbl td { padding: .75rem .9rem; border-bottom: 1px solid #EEF1F6; vertical-align: middle; }
+    .tbl th { padding-left: .9rem; padding-right: .9rem; }
+    .tbl td.mail { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .tbl tbody tr:last-child td { border-bottom: 0; }
     .tbl tbody tr:hover td { background: #FAFBFD; }
 
-    .person { display: flex; align-items: center; gap: .75rem; min-width: 180px; }
+    .person { display: flex; align-items: center; gap: .75rem; min-width: 150px; }
     .avatar {
         flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
         background: var(--accent-soft); color: var(--accent-ink); font-size: .75rem; font-weight: 700;
@@ -100,6 +104,8 @@
     .act.edit:hover  { background: #D8E3FA; color: var(--accent-ink); }
     .act.reset { background: var(--warn-soft); color: var(--warn); }
     .act.reset:hover { background: #FAE5C4; color: var(--warn); }
+    .act.del   { background: var(--bad-soft); color: var(--bad); }
+    .act.del:hover   { background: #F8D4D4; color: var(--bad); }
 
     .empty { text-align: center; padding: 3rem 1rem !important; color: var(--muted); }
     .empty i { display: block; font-size: 1.6rem; margin-bottom: .6rem; color: #C2CAD8; }
@@ -125,6 +131,12 @@
     .usr-modal .modal-footer { border-top: 0; padding: .25rem 1.4rem 1.25rem; gap: .5rem; }
     .usr-modal .btn-cancel { background: var(--idle-soft); color: #475467; border: 0; border-radius: 8px; font-size: .86rem; font-weight: 600; padding: .5rem 1rem; }
     .usr-modal .btn-cancel:hover { background: #E3E8F0; }
+    .usr-modal .modal-title .ico.danger { background: var(--bad-soft); color: var(--bad); }
+    .btn-danger-soft {
+        background: var(--bad); color: #fff; border: 0; border-radius: 8px; font-size: .86rem; font-weight: 600; padding: .5rem 1rem;
+        transition: background .15s;
+    }
+    .btn-danger-soft:hover { background: #A82E2E; color: #fff; }
 </style>
 
 <div class="usr">
@@ -193,8 +205,11 @@
                         <td>
                             <div class="acts">
                                 <a href="{{ route('users.edit', $u['uid']) }}" class="act edit"><i class="fa-solid fa-pen"></i>Edit</a>
-                                <button type="button" class="act reset js-reset" data-uid="{{ $u['uid'] }}" data-name="{{ $u['name'] }}">
-                                    <i class="fa-solid fa-key"></i>Reset password
+                                <button type="button" class="act reset js-reset" data-uid="{{ $u['uid'] }}" data-name="{{ $u['name'] }}" title="Reset password" aria-label="Reset password for {{ $u['uid'] }}">
+                                    <i class="fa-solid fa-key"></i><span class="d-none d-xxl-inline">Reset</span>
+                                </button>
+                                <button type="button" class="act del js-delete" data-uid="{{ $u['uid'] }}" data-name="{{ $u['name'] }}" title="Delete user" aria-label="Delete {{ $u['uid'] }}">
+                                    <i class="fa-solid fa-trash"></i><span class="d-none d-xxl-inline">Delete</span>
                                 </button>
                             </div>
                         </td>
@@ -236,6 +251,28 @@
         </form>
     </div>
 </div>
+
+{{-- Delete confirmation modal --}}
+<div class="modal fade usr-modal" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="" id="deleteForm" class="modal-content">
+            @csrf
+            @method('DELETE')
+            <div class="modal-header">
+                <h5 class="modal-title"><span class="ico danger"><i class="fa-solid fa-trash"></i></span>Delete user</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteName"></strong> (<code id="deleteUid"></code>)?</p>
+                <p class="mb-0">The account will be removed from LDAP and the student will lose eduroam access immediately. This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-danger-soft px-4">Yes, delete</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -248,6 +285,16 @@
         document.getElementById('resetName').textContent = btn.dataset.name;
         document.getElementById('resetUid').textContent = btn.dataset.uid;
         modal.show();
+    }));
+
+    const deleteUrlTemplate = @json(route('users.destroy', ['uid' => '__UID__']));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    document.querySelectorAll('.js-delete').forEach(btn => btn.addEventListener('click', () => {
+        document.getElementById('deleteForm').action = deleteUrlTemplate.replace('__UID__', encodeURIComponent(btn.dataset.uid));
+        document.getElementById('deleteName').textContent = btn.dataset.name;
+        document.getElementById('deleteUid').textContent = btn.dataset.uid;
+        deleteModal.show();
     }));
 </script>
 @endpush

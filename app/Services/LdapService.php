@@ -222,6 +222,20 @@ class LdapService
         }
     }
 
+
+    public function deleteStudent(string $uid): void
+    {
+        $this->ensureConnected();
+
+        if (! @ldap_delete($this->conn, $this->dnFor($uid))) {
+            // 32 = No such object (already gone)
+            if (ldap_errno($this->conn) === 32) {
+                throw new RuntimeException('User not found in LDAP.');
+            }
+            throw new RuntimeException('Delete failed: ' . ldap_error($this->conn));
+        }
+    }
+
     /* ------------------------------------------------------------------
      |  Helpers
      * -----------------------------------------------------------------*/

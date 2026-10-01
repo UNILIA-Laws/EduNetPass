@@ -31,7 +31,7 @@
     <div class="container-fluid">
         <div class="d-flex align-items-center">
             <img src="{{ asset('unilia.jpg') }}" alt="UNILIA Logo" class="logo-img me-3">
-            <a href="{{ url('/') }}" class="navbar-brand-custom"><i class="fa-solid fa-wifi me-2"></i>Laws Eduroam</a>
+            <a href="{{ url('/') }}" class="navbar-brand-custom"><i class="fa-solid fa-wifi me-2"></i>EduNetPass</a>
         </div>
         @auth
             <div class="d-flex align-items-center gap-2 gap-md-3">

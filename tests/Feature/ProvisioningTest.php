@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\LdapService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -95,18 +96,33 @@ class ProvisioningTest extends TestCase
 
     public function test_dashboard_and_login_pages_render(): void
     {
-        $this->get('/login')->assertOk()->assertSee('ICT Staff Login');
-        $this->actingAs(User::factory()->create())->get('/')->assertOk()->assertSee('Single student');
+        // The login view now says "Sign in" (the old "ICT Staff Login" copy is gone).
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('Sign in')
+            ->assertSee('ICT staff only');
+
+        $this->actingAs(User::factory()->create())
+            ->get('/')
+            ->assertOk()
+            ->assertSee('Single student');
     }
 
     public function test_staff_can_log_in_and_wrong_password_is_rejected(): void
     {
-        $u = User::factory()->create(['email' => 'ict@unilia.ac.mw']); // factory password = "password"
+        // Set the password explicitly so the test doesn't depend on the factory default.
+        $u = User::factory()->create([
+            'email'    => 'ict@unilia.ac.mw',
+            'password' => Hash::make('secret-pass-123'),
+        ]);
 
-        $this->post('/login', ['email' => 'ict@unilia.ac.mw', 'password' => 'nope'])->assertSessionHasErrors('email');
+        $this->post('/login', ['email' => 'ict@unilia.ac.mw', 'password' => 'nope'])
+            ->assertSessionHasErrors('email');
         $this->assertGuest();
 
-        $this->post('/login', ['email' => 'ict@unilia.ac.mw', 'password' => 'password'])->assertRedirect('/');
+        $this->post('/login', ['email' => 'ict@unilia.ac.mw', 'password' => 'secret-pass-123'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/');
         $this->assertAuthenticatedAs($u);
     }
 

@@ -20,6 +20,10 @@ class StudentCredentialsMail extends Mailable
     public function build()
     {
         return $this->subject('Eduroam Login Credentials')
-            ->view('emails.student_credentials');
+            ->view('emails.student_credentials')
+            ->attach(public_path('unilia.ac.mw.pem'), [
+                'as'   => 'unilia.ac.mw.pem',
+                'mime' => 'application/x-pem-file',
+            ]);
     }
 }

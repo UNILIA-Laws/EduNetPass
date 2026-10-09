@@ -11,6 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Must come first: users references it
+        Schema::create('campuses', function (Blueprint $table) {
+            $table->id();
+            $table->string('key')->unique();          // stable slug used in forms, never edited
+            $table->string('label')->unique();        // shown in dropdowns
+            $table->string('dn')->unique();           // eduPersonOrgUnitDN value
+            $table->boolean('is_active')->default(true);
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->timestamps();
+        });
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
@@ -18,6 +29,10 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->boolean('is_admin')->default(false);
+            $table->foreignId('campus_id')
+                ->nullable()
+                ->constrained('campuses')
+                ->nullOnDelete();   // deleting a campus just un-assigns its users
             $table->rememberToken();
             $table->timestamps();
         });
@@ -43,8 +58,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');       // before campuses, because of the foreign key
+        Schema::dropIfExists('campuses');
     }
 };

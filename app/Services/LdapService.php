@@ -281,4 +281,45 @@ class LdapService
         $salt = random_bytes(4);
         return '{SSHA}' . base64_encode(sha1($plain . $salt, true) . $salt);
     }
+
+
+
+    /**
+ * Count students in a single paged pass (only fetches the campus attribute).
+ *
+ * @return array{total:int, 
+ */
+    public function countStudents(): array
+    {
+        $this->ensureConnected();
+
+        $norm   = fn (string $s) => strtolower(preg_replace('/\s*,\s*/', ',', trim($s)));
+        $total  = 0;
+        $counts = [];
+        $cookie = '';
+
+        do {
+            $res = @ldap_search(
+                $this->conn, config('ldap.people_dn'), '(objectClass=inetOrgPerson)',
+                ['eduPersonOrgUnitDN'], 0, 0, 0, LDAP_DEREF_NEVER,
+                [['oid' => LDAP_CONTROL_PAGEDRESULTS, 'value' => ['size' => (int) config('ldap.page_size'), 'cookie' => $cookie]]]
+            );
+            if ($res === false) {
+                throw new RuntimeException('LDAP count failed: ' . ldap_error($this->conn));
+            }
+
+            ldap_parse_result($this->conn, $res, $code, $matched, $message, $referrals, $controls);
+
+            $entries = ldap_get_entries($this->conn, $res);
+            for ($i = 0; $i < $entries['count']; $i++) {
+                $total++;
+                $dn = $norm($entries[$i]['edupersonorgunitdn'][0] ?? '');
+                $counts[$dn] = ($counts[$dn] ?? 0) + 1;
+            }
+
+            $cookie = $controls[LDAP_CONTROL_PAGEDRESULTS]['value']['cookie'] ?? '';
+        } while ($cookie !== '');
+
+        return ['total' => $total, 'byCampus' => $counts];
+    }
 }

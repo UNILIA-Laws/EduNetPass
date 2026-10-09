@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProvisioningController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\StaffController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -28,6 +29,14 @@ Route::middleware('auth')->group(function () {
     Route::delete('/users/{uid}', [UserController::class, 'destroy'])->where('uid', $uid)->name('users.destroy');
     Route::put('/users/{uid}', [UserController::class, 'update'])->where('uid', $uid)->name('users.update');
     Route::post('/users/{uid}/reset-password', [UserController::class, 'resetPassword'])->where('uid', $uid)->name('users.reset');
+
+    // Staff management
+    Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
+    Route::get('/staff/create', [StaffController::class, 'create'])->name('staff.create');
+    Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
+    Route::get('/staff/{user}/edit', [StaffController::class, 'edit'])->name('staff.edit');
+    Route::put('/staff/{user}', [StaffController::class, 'update'])->name('staff.update');
+    Route::delete('/staff/{user}', [StaffController::class, 'destroy'])->name('staff.destroy');
 
     
 

@@ -4,12 +4,13 @@
         ? collect(preg_split('/\s+/', trim($u->name)))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('')
         : '';
     $links = [
-        ['route' => 'dashboard',   'active' => request()->routeIs('dashboard'),                                     'icon' => 'fa-gauge-high', 'label' => 'Dashboard'],
-        ['route' => 'enroll',      'active' => request()->routeIs('enroll'),                                        'icon' => 'fa-user-plus',  'label' => 'Add students'],
-        ['route' => 'users.index', 'active' => request()->routeIs('users.*') && !request()->routeIs('users.store'), 'icon' => 'fa-users',      'label' => 'Users'],
+        ['route' => 'dashboard',   'active' => request()->routeIs('dashboard'),                                     'icon' => 'fa-gauge-high',         'label' => 'Dashboard'],
+        ['route' => 'enroll',      'active' => request()->routeIs('enroll'),                                        'icon' => 'fa-user-plus',          'label' => 'Ad students'],
+        ['route' => 'users.index', 'active' => request()->routeIs('users.*') && !request()->routeIs('users.store'), 'icon' => 'fa-users',              'label' => 'Users'],
+        ['route' => 'staff.index', 'active' => request()->routeIs('staff.*'),                                       'icon' => 'fa-user-tie',           'label' => 'Staff management'],
+        ['route' => 'campuses.index', 'active' => request()->routeIs('campuses.*'),                                 'icon' => 'fa-building-columns',   'label' => 'Campus'],
     ];
 @endphp
-
 <header class="topbar">
     <div class="container-xl">
         <nav class="navbar navbar-expand-lg p-0">

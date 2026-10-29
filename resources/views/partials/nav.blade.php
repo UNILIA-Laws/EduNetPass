@@ -12,10 +12,9 @@
         ['heading' => 'Directory'],
         ['route' => 'enroll',      'active' => request()->routeIs('enroll'),                                        'icon' => 'fa-user-plus',     'label' => 'Add LDAP users'],
         ['route' => 'users.index', 'active' => request()->routeIs('users.*') && !request()->routeIs('users.store'), 'icon' => 'fa-address-book', 'label' => 'View LDAP users'],
-    ['route' => 'groups.index', 'active' => request()->routeIs('groups.*'), 'icon' => 'fa-people-group', 'label' => 'LDAP groups'],
-['route' => 'ous.index',    'active' => request()->routeIs('ous.*'),    'icon' => 'fa-sitemap',      'label' => 'Organizational units'],
+        ['route' => 'groups.index', 'active' => request()->routeIs('groups.*'), 'icon' => 'fa-people-group', 'label' => 'LDAP groups'],
+        ['route' => 'ous.index',    'active' => request()->routeIs('ous.*'),    'icon' => 'fa-sitemap',      'label' => 'Organizational units'],
         ['href' => '#',            'active' => false,                                                               'icon' => 'fa-file-import',   'label' => 'Bulk import'],
-        ['href' => '#',            'active' => false,                                                               'icon' => 'fa-key',           'label' => 'Password resets'],
         ['route' => 'campuses.index', 'active' => request()->routeIs('campuses.*'),                                 'icon' => 'fa-building-columns', 'label' => 'Campuses'],
 
         ['heading' => 'Administration'],

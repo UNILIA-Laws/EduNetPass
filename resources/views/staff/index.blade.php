@@ -2,88 +2,128 @@
 @section('title', 'eduroam | Staff')
 
 @section('content')
-<div class="container-xl py-4 py-lg-5">
+@include('partials.usr-style')
 
-    <div class="mb-3">
-        <h1 class="h3 fw-bold mb-1">Staff</h1>
-        <p class="text-muted mb-0">Manage who can sign in to this portal.</p>
+<div class="usr">
+<div class="container">
+
+    <div class="usr-head">
+        <div>
+            <h1 class="usr-title">Staff</h1>
+            <p class="usr-sub">Manage who can sign in to this portal.</p>
+        </div>
+        <span class="count">{{ number_format($staff->total()) }} {{ \Illuminate\Support\Str::plural('account', $staff->total()) }}</span>
     </div>
 
-    @include('partials.admin-tabs')
 
     @if(session('status'))
-        <div class="flash ok"><i class="fa-solid fa-circle-check mt-1"></i><span>{{ session('status') }}</span></div>
+        <div class="note good"><i class="fa-solid fa-circle-check mt-1"></i><span>{{ session('status') }}</span></div>
     @endif
     @if($errors->has('staff'))
-        <div class="flash bad"><i class="fa-solid fa-triangle-exclamation mt-1"></i><span>{{ $errors->first('staff') }}</span></div>
+        <div class="note bad"><i class="fa-solid fa-triangle-exclamation mt-1"></i><span>{{ $errors->first('staff') }}</span></div>
     @endif
 
-    <div class="set-card">
-        <div class="head">
-            <h2>
-                <i class="fa-solid fa-user-shield"></i>Staff accounts
-                <span class="text-muted fw-normal small">({{ $staff->total() }})</span>
-            </h2>
-            <div class="d-flex gap-2">
-                <form method="GET" class="d-flex">
-                    <input type="search" name="q" value="{{ $q }}" placeholder="Search name or e-mail"
-                           class="form-control form-control-sm" style="min-width:210px">
-                </form>
-                <a href="{{ route('staff.create') }}" class="btn btn-eduroam btn-sm px-3 d-flex align-items-center">
-                    <i class="fa-solid fa-plus me-2"></i>Add staff
-                </a>
+    <div class="panel">
+
+        <form method="GET" action="{{ route('staff.index') }}" class="toolbar">
+            <div class="search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="search" name="q" value="{{ $q }}" class="form-control" placeholder="Search name or e-mail" aria-label="Search staff">
             </div>
-        </div>
+            <button class="btn-primary-soft">Search</button>
+            @if($q !== '')
+                <a href="{{ route('staff.index') }}" class="btn-clear">Clear</a>
+            @endif
+            <a href="{{ route('staff.create') }}" class="btn-primary-soft text-decoration-none d-inline-flex align-items-center ms-auto">
+                <i class="fa-solid fa-plus me-2"></i>Add staff
+            </a>
+        </form>
 
         <div class="table-responsive">
-            <table class="table align-middle mb-0" style="font-size:.88rem">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">Name</th>
-                        <th>Role</th>
-                        <th>Campus</th>
-                        <th class="text-end pe-4">Actions</th>
-                    </tr>
+            <table class="tbl">
+                <thead>
+                    <tr><th>Name</th><th>Role</th><th>Campus</th><th class="text-end">Actions</th></tr>
                 </thead>
                 <tbody>
                 @forelse($staff as $s)
+                    @php
+                        $initials = collect(preg_split('/\s+/', trim($s->name ?? '')))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->join('') ?: '?';
+                        $isMe = $s->is(auth()->user());
+                    @endphp
                     <tr>
-                        <td class="ps-4">
-                            <div class="fw-semibold">
-                                {{ $s->name }}
-                                @if($s->is(auth()->user()))<span class="text-muted fw-normal">(you)</span>@endif
+                        <td>
+                            <div class="person">
+                                <span class="avatar" aria-hidden="true">{{ $initials }}</span>
+                                <div>
+                                    <div class="nm">
+                                        {{ $s->name }}
+                                        @if($isMe)<span class="desc fw-normal">(you)</span>@endif
+                                    </div>
+                                    <div class="id">{{ $s->email }}</div>
+                                </div>
                             </div>
-                            <div class="text-muted small">{{ $s->email }}</div>
                         </td>
                         <td>
-                            <span class="pill {{ $s->is_admin ? 'admin' : 'off' }}">
-                                {{ $s->is_admin ? 'Administrator' : 'Staff' }}
-                            </span>
+                            <span class="chip {{ $s->is_admin ? 'type-faculty' : '' }}">{{ $s->is_admin ? 'Administrator' : 'Staff' }}</span>
                         </td>
-                        <td>{{ $s->campus?->label ?? 'All campuses' }}</td>
-                        <td class="text-end pe-4 text-nowrap">
-                            <a href="{{ route('staff.edit', $s) }}" class="icon-btn" title="Edit">
-                                <i class="fa-solid fa-pen"></i>
-                            </a>
-                            @unless($s->is(auth()->user()))
-                                <form action="{{ route('staff.destroy', $s) }}" method="POST" class="d-inline"
-                                      onsubmit="return confirm('Delete {{ addslashes($s->name) }}? This cannot be undone.')">
-                                    @csrf @method('DELETE')
-                                    <button class="icon-btn danger" title="Delete"><i class="fa-solid fa-trash"></i></button>
-                                </form>
-                            @endunless
+                        <td><span class="chip">{{ $s->campus?->label ?? 'All campuses' }}</span></td>
+                        <td>
+                            <div class="acts">
+                                <a href="{{ route('staff.edit', $s) }}" class="act edit"><i class="fa-solid fa-pen"></i>Edit</a>
+                                @unless($isMe)
+                                    <button type="button" class="act del js-delete"
+                                            data-action="{{ route('staff.destroy', $s) }}" data-name="{{ $s->name }}" data-email="{{ $s->email }}"
+                                            title="Delete staff" aria-label="Delete {{ $s->name }}">
+                                        <i class="fa-solid fa-trash"></i><span class="d-none d-xxl-inline">Delete</span>
+                                    </button>
+                                @endunless
+                            </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="text-center text-muted py-4">No staff found.</td></tr>
+                    <tr><td colspan="4" class="empty"><i class="fa-solid fa-user-slash"></i>No staff found.</td></tr>
                 @endforelse
                 </tbody>
             </table>
         </div>
 
-        @if($staff->hasPages())
-            <div class="p-3 border-top">{{ $staff->links() }}</div>
-        @endif
+        <div class="pager">{{ $staff->links('pagination::bootstrap-5') }}</div>
+    </div>
+</div>
+</div>
+
+{{-- Delete confirmation modal (one modal, reused for every row) --}}
+<div class="modal fade usr-modal" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="" id="deleteForm" class="modal-content">
+            @csrf
+            @method('DELETE')
+            <div class="modal-header">
+                <h5 class="modal-title"><span class="ico danger"><i class="fa-solid fa-trash"></i></span>Delete staff</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteName"></strong> (<code id="deleteEmail"></code>)?</p>
+                <p class="mb-0">They will no longer be able to sign in to this portal. This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-danger-soft px-4">Yes, delete</button>
+            </div>
+        </form>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    document.querySelectorAll('.js-delete').forEach(btn => btn.addEventListener('click', () => {
+        document.getElementById('deleteForm').action = btn.dataset.action;
+        document.getElementById('deleteName').textContent = btn.dataset.name;
+        document.getElementById('deleteEmail').textContent = btn.dataset.email;
+        deleteModal.show();
+    }));
+</script>
+@endpush

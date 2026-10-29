@@ -6,6 +6,9 @@ use App\Http\Controllers\ProvisioningController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\CampusController;
+use App\Http\Controllers\GroupController;
+use App\Http\Controllers\OuController;
+
 use Illuminate\Support\Facades\Route;
 
 
@@ -25,6 +28,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/campuses/{campus}/edit', [CampusController::class, 'edit'])->name('campuses.edit');
     Route::put('/campuses/{campus}', [CampusController::class, 'update'])->name('campuses.update');
     Route::delete('/campuses/{campus}', [CampusController::class, 'destroy'])->name('campuses.destroy');
+
+
+    Route::get('/groups',                      [GroupController::class, 'index'])->name('groups.index');
+    Route::post('/groups',                     [GroupController::class, 'store'])->name('groups.store');
+    Route::get('/groups/{cn}',                 [GroupController::class, 'show'])->name('groups.show');
+    Route::delete('/groups/{cn}',              [GroupController::class, 'destroy'])->name('groups.destroy');
+    Route::post('/groups/{cn}/members',        [GroupController::class, 'addMember'])->name('groups.members.store');
+    Route::delete('/groups/{cn}/members/{uid}',[GroupController::class, 'removeMember'])->name('groups.members.destroy');
+
+    Route::get('/ous',      [OuController::class, 'index'])->name('ous.index');
+    Route::post('/ous',     [OuController::class, 'store'])->name('ous.store');
+    Route::delete('/ous',   [OuController::class, 'destroy'])->name('ous.destroy');
 
 
     // Add students (moved from "/" to "/enroll")

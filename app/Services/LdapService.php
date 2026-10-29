@@ -12,7 +12,7 @@ use RuntimeException;
 class LdapService
 {
     /** @var \LDAP\Connection|null */
-    private $conn = null;
+    protected $conn = null;
 
     public function __destruct()
     {
@@ -53,14 +53,14 @@ class LdapService
         }
     }
 
-    private function ensureConnected(): void
+    protected function ensureConnected(): void
     {
         if (! $this->conn) {
             $this->connect();
         }
     }
 
-    private function dnFor(string $uid): string
+    protected function dnFor(string $uid): string
     {
         return 'uid=' . ldap_escape($uid, '', LDAP_ESCAPE_DN) . ',' . config('ldap.people_dn');
     }

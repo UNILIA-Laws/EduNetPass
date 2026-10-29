@@ -7,10 +7,13 @@ use InvalidArgumentException;
 
 /**
  * Reads a .csv / .txt / .xlsx upload into a list of associative rows.
+ *
+ * Only givenName, sn, uid and mail columns must exist in the file.
+ * "Reg", "userPassword" and "type" are optional columns.
  */
 class StudentFileReader
 {
-    private const COLUMNS = ['givenName', 'sn', 'uid', 'mail', 'userPassword', 'Reg'];
+    private const COLUMNS  = ['givenName', 'sn', 'uid', 'mail', 'userPassword', 'Reg', 'type'];
     private const REQUIRED = ['givenName', 'sn', 'uid', 'mail'];
 
     /** @return list<array<string,string>> */

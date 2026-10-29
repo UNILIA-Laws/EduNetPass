@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
 
     // Add students (moved from "/" to "/enroll")
     Route::get('/enroll', [ProvisioningController::class, 'showForm'])->name('enroll');
+    Route::get('/enroll/bulk', [ProvisioningController::class, 'bulkUpload'])->name('enroll.bulk');
     Route::post('/users', [ProvisioningController::class, 'storeSingle'])->name('users.store');
     Route::post('/upload-csv', [ProvisioningController::class, 'upload'])->name('upload.csv');
     Route::get('/download-sample-csv', [ProvisioningController::class, 'downloadSample'])->name('download.sample');

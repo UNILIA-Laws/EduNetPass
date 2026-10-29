@@ -49,6 +49,36 @@ return [
         'urn:mace:terena.org:tcs:personal-user',
     ],
 
+
+
+
+'user_types' => [
+    'student' => [
+        'label'        => 'Student',
+        'affiliations' => ['student', 'member'],
+        'entitlements' => [],
+        'required'     => ['givenName', 'sn', 'uid', 'mail'],
+    ],
+    'staff' => [
+        'label'        => 'Staff',
+        'affiliations' => ['staff', 'employee', 'member'],
+        'entitlements' => [],
+        'required'     => ['givenName', 'sn', 'uid', 'mail'],
+    ],
+    'faculty' => [
+        'label'        => 'Lecturer / Faculty',
+        'affiliations' => ['faculty', 'employee', 'member'],
+        'entitlements' => [],
+        'required'     => ['givenName', 'sn', 'uid', 'mail'],
+    ],
+    'guest' => [
+        'label'        => 'Guest / Visitor',
+        'affiliations' => ['affiliate'],
+        'entitlements' => [],
+        'required'     => ['givenName', 'sn', 'uid', 'mail'],
+    ],
+],
+
     // Who receives the bulk-upload log e-mail
     'log_recipient' => env('PROVISIONING_LOG_EMAIL', 'ictlaws@unilia.ac.mw'),
 

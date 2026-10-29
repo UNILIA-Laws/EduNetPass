@@ -14,6 +14,8 @@
         --accent-soft: #E8EEFC;
         --warn: #A8620B;  --warn-soft: #FDF1DF;
         --bad: #C93A3A;   --bad-soft: #FCE9E9;
+        --good: #1F7A4D;  --good-soft: #E3F5EC;
+        --violet: #6A3FC4; --violet-soft: #EFE9FB;
         --idle-soft: #EEF1F5;
         color: var(--ink);
         font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -94,6 +96,12 @@
     .mail { color: var(--muted); }
     .chip { display: inline-block; font-size: .76rem; font-weight: 600; background: var(--idle-soft); color: #475467; padding: .15rem .6rem; border-radius: 999px; }
 
+    /* Type chips (one colour per user type; unknown types fall back to the grey .chip) */
+    .chip.type-student { background: var(--accent-soft); color: var(--accent-ink); }
+    .chip.type-staff   { background: var(--good-soft);   color: var(--good); }
+    .chip.type-faculty { background: var(--violet-soft); color: var(--violet); }
+    .chip.type-guest   { background: var(--warn-soft);   color: var(--warn); }
+
     /* Row actions */
     .acts { display: flex; justify-content: flex-end; gap: .4rem; white-space: nowrap; }
     .act {
@@ -163,6 +171,12 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="search" name="q" value="{{ $q }}" class="form-control" placeholder="Search by username, name or e-mail" aria-label="Search users" autofocus>
             </div>
+            <select name="type" class="form-select" aria-label="User type">
+                <option value="">All types</option>
+                @foreach($types as $key => $t)
+                    <option value="{{ $key }}" @selected($typeKey === $key)>{{ $t['label'] }}</option>
+                @endforeach
+            </select>
             <select name="campus" class="form-select" aria-label="Campus">
                 <option value="">All campuses</option>
                 @foreach($campuses as $key => $c)
@@ -170,7 +184,7 @@
                 @endforeach
             </select>
             <button class="btn-primary-soft">Search</button>
-            @if($q !== '' || $campusKey !== '')
+            @if($q !== '' || $campusKey !== '' || $typeKey !== '')
                 <a href="{{ route('users.index') }}" class="btn-clear">Clear</a>
             @endif
         </form>
@@ -182,13 +196,14 @@
         <div class="table-responsive">
             <table class="tbl">
                 <thead>
-                    <tr><th>User</th><th>E-mail</th><th>Campus</th><th class="text-end">Actions</th></tr>
+                    <tr><th>User</th><th>E-mail</th><th>Type</th><th>Campus</th><th class="text-end">Actions</th></tr>
                 </thead>
                 <tbody>
                 @forelse($users as $u)
                     @php
                         $campusLabel = collect($campuses)->first(fn ($c) => strtolower(preg_replace('/\s*,\s*/', ',', $c['dn'])) === strtolower(preg_replace('/\s*,\s*/', ',', $u['campusDn'])))['label'] ?? '-';
                         $initials = collect(preg_split('/\s+/', trim($u['name'] ?? '')))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->join('') ?: '?';
+                        $typeLabel = $u['type'] ? ($types[$u['type']]['label'] ?? ucfirst($u['type'])) : 'Other';
                     @endphp
                     <tr>
                         <td>
@@ -201,6 +216,12 @@
                             </div>
                         </td>
                         <td class="mail">{{ $u['mail'] ?: '-' }}</td>
+                        <td>
+                            <span class="chip {{ $u['type'] ? 'type-' . $u['type'] : '' }}"
+                                  @if(! $u['type']) title="Affiliations: {{ implode(', ', $u['affiliations']) ?: 'none' }}" @endif>
+                                {{ $typeLabel }}
+                            </span>
+                        </td>
                         <td><span class="chip">{{ $campusLabel }}</span></td>
                         <td>
                             <div class="acts">
@@ -215,7 +236,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="empty"><i class="fa-solid fa-user-slash"></i>No users found.</td></tr>
+                    <tr><td colspan="5" class="empty"><i class="fa-solid fa-user-slash"></i>No users found.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -241,7 +262,7 @@
                 <input type="text" name="userPassword" id="resetPwd" class="form-control mb-3" minlength="8" autocomplete="off">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" name="send_email" value="1" id="sendEmail" checked>
-                    <label class="form-check-label" for="sendEmail">E-mail the new password to the student</label>
+                    <label class="form-check-label" for="sendEmail">E-mail the new password to the user</label>
                 </div>
             </div>
             <div class="modal-footer">
@@ -264,7 +285,7 @@
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete <strong id="deleteName"></strong> (<code id="deleteUid"></code>)?</p>
-                <p class="mb-0">The account will be removed from LDAP and the student will lose eduroam access immediately. This cannot be undone.</p>
+                <p class="mb-0">The account will be removed from LDAP and the user will lose eduroam access immediately. This cannot be undone.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>

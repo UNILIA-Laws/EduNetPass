@@ -6,6 +6,8 @@ use RuntimeException;
 
 /**
  * Thin wrapper around PHP's ldap_* functions.
+ * Handles several user types (student, staff, faculty, guest...) that all live
+ * under the same people container and are told apart by eduPersonAffiliation.
  */
 class LdapService
 {
@@ -64,21 +66,51 @@ class LdapService
     }
 
     /* ------------------------------------------------------------------
-     |  Create / update (used by bulk upload and the single-student form)
+     |  User types
+     * -----------------------------------------------------------------*/
+
+    /** @return array{label:string,affiliations:list<string>,entitlements:list<string>,required:list<string>} */
+    private function typeConfig(string $type): array
+    {
+        $t = config("ldap.user_types.{$type}");
+        if (! $t) {
+            throw new RuntimeException("Unknown user type: {$type}");
+        }
+        return $t;
+    }
+
+    private function typeFromAffiliations(array $affiliations): ?string
+    {
+        $have = array_map('strtolower', $affiliations);
+
+        foreach ((array) config('ldap.user_types') as $key => $t) {
+            if (in_array(strtolower($t['affiliations'][0]), $have, true)) {
+                return $key;
+            }
+        }
+        return null;
+    }
+
+    /* ------------------------------------------------------------------
+     |  Create / update (used by bulk upload and the single-user form)
      * -----------------------------------------------------------------*/
 
     /**
      * Create the user, or update it if the uid already exists.
+     * An existing account of a DIFFERENT type is never overwritten.
      *
      * @param array{uid:string,givenName:string,sn:string,mail:string,password:string} $u
      * @return string 'created' | 'updated'
      */
-    public function upsertStudent(array $u, string $campusDn): string
+    public function upsertUser(array $u, string $campusDn, string $type = 'student'): string
     {
         $this->ensureConnected();
 
+        $t  = $this->typeConfig($type);
         $dn = $this->dnFor($u['uid']);
         $cn = trim($u['givenName'] . ' ' . $u['sn']);
+
+        $entitlements = array_values($t['entitlements'] ?: (array) config('ldap.entitlements', []));
 
         $attrs = [
             'sn'                   => $u['sn'],
@@ -89,11 +121,20 @@ class LdapService
             'userPassword'         => self::ssha($u['password']),
             'mail'                 => $u['mail'],
             'eduPersonOrgUnitDN'   => $campusDn,
-            'eduPersonAffiliation' => ['student'],
-            'eduPersonEntitlement' => array_values(config('ldap.entitlements')),
+            'eduPersonAffiliation' => array_values($t['affiliations']),
         ];
+        if ($entitlements) {
+            $attrs['eduPersonEntitlement'] = $entitlements;
+        }
 
-        if ($this->exists($dn)) {
+        $existing = $this->findStudent($u['uid']);
+
+        if ($existing) {
+            if ($existing['type'] !== null && $existing['type'] !== $type) {
+                throw new RuntimeException(
+                    "uid '{$u['uid']}' already exists as {$existing['type']}, not {$type}."
+                );
+            }
             if (! @ldap_modify($this->conn, $dn, $attrs)) {
                 throw new RuntimeException('LDAP modify failed: ' . ldap_error($this->conn));
             }
@@ -114,26 +155,34 @@ class LdapService
      * -----------------------------------------------------------------*/
 
     /**
-     * List users under the people container (handles servers with a size limit
-     * by using paged results).
+     * List users under the people container (uses paged results so servers
+     * with a size limit still work).
      *
      * @param string      $q        free text: matches uid, name or e-mail
      * @param string|null $campusDn only users of this campus
+     * @param string|null $type     only users of this type (key of ldap.user_types)
      * @return list<array<string,mixed>> sorted by uid
      */
-    public function searchStudents(string $q = '', ?string $campusDn = null): array
+    public function searchStudents(string $q = '', ?string $campusDn = null, ?string $type = null): array
     {
         $this->ensureConnected();
 
         $filter = '(objectClass=inetOrgPerson)';
+
+        if ($type) {
+            $primary = $this->typeConfig($type)['affiliations'][0];
+            $p       = ldap_escape($primary, '', LDAP_ESCAPE_FILTER);
+            $filter  = "(&{$filter}(eduPersonAffiliation={$p}))";
+        }
+
         if ($q !== '') {
-            $e = ldap_escape($q, '', LDAP_ESCAPE_FILTER);
+            $e      = ldap_escape($q, '', LDAP_ESCAPE_FILTER);
             $filter = "(&{$filter}(|(uid=*{$e}*)(cn=*{$e}*)(mail=*{$e}*)))";
         }
 
-        $attrs = ['uid', 'givenName', 'sn', 'cn', 'mail', 'eduPersonOrgUnitDN', 'eduPersonAffiliation'];
-        $max   = (int) config('ldap.max_list');
-        $users = [];
+        $attrs  = ['uid', 'givenName', 'sn', 'cn', 'mail', 'eduPersonOrgUnitDN', 'eduPersonAffiliation'];
+        $max    = (int) config('ldap.max_list');
+        $users  = [];
         $cookie = '';
 
         do {
@@ -185,11 +234,11 @@ class LdapService
     }
 
     /* ------------------------------------------------------------------
-     |  Edit / reset password
+     |  Edit / reset password / delete
      * -----------------------------------------------------------------*/
 
     /**
-     * Change name, e-mail and campus. The username (uid) cannot be changed.
+     * Change name, e-mail and campus. The username (uid) and type cannot be changed here.
      *
      * @param array{givenName:string,sn:string,mail:string} $c
      */
@@ -222,13 +271,12 @@ class LdapService
         }
     }
 
-
     public function deleteStudent(string $uid): void
     {
         $this->ensureConnected();
 
         if (! @ldap_delete($this->conn, $this->dnFor($uid))) {
-            // 32 = No such object (already gone)
+            // 32 = No such object
             if (ldap_errno($this->conn) === 32) {
                 throw new RuntimeException('User not found in LDAP.');
             }
@@ -237,35 +285,84 @@ class LdapService
     }
 
     /* ------------------------------------------------------------------
+     |  Counting
+     * -----------------------------------------------------------------*/
+
+    /**
+     * Count users in a single paged pass.
+     *
+     * @return array{total:int, byCampus:array<string,int>, byType:array<string,int>}
+     *         byCampus is keyed by normalised campus DN; byType by user-type key
+     *         (users that match no configured type are counted under 'other').
+     */
+    public function countStudents(): array
+    {
+        $this->ensureConnected();
+
+        $norm     = fn (string $s) => strtolower(preg_replace('/\s*,\s*/', ',', trim($s)));
+        $total    = 0;
+        $byCampus = [];
+        $byType   = [];
+        $cookie   = '';
+
+        do {
+            $res = @ldap_search(
+                $this->conn, config('ldap.people_dn'), '(objectClass=inetOrgPerson)',
+                ['eduPersonOrgUnitDN', 'eduPersonAffiliation'], 0, 0, 0, LDAP_DEREF_NEVER,
+                [['oid' => LDAP_CONTROL_PAGEDRESULTS, 'value' => ['size' => (int) config('ldap.page_size'), 'cookie' => $cookie]]]
+            );
+            if ($res === false) {
+                throw new RuntimeException('LDAP count failed: ' . ldap_error($this->conn));
+            }
+
+            ldap_parse_result($this->conn, $res, $code, $matched, $message, $referrals, $controls);
+
+            $entries = ldap_get_entries($this->conn, $res);
+            for ($i = 0; $i < $entries['count']; $i++) {
+                $total++;
+
+                $dn            = $norm($entries[$i]['edupersonorgunitdn'][0] ?? '');
+                $byCampus[$dn] = ($byCampus[$dn] ?? 0) + 1;
+
+                $type          = $this->typeFromAffiliations($this->affiliationsOf($entries[$i])) ?? 'other';
+                $byType[$type] = ($byType[$type] ?? 0) + 1;
+            }
+
+            $cookie = $controls[LDAP_CONTROL_PAGEDRESULTS]['value']['cookie'] ?? '';
+        } while ($cookie !== '');
+
+        return ['total' => $total, 'byCampus' => $byCampus, 'byType' => $byType];
+    }
+
+    /* ------------------------------------------------------------------
      |  Helpers
      * -----------------------------------------------------------------*/
 
-    private function exists(string $dn): bool
+    /** @return list<string> */
+    private function affiliationsOf(array $e): array
     {
-        $res = @ldap_read($this->conn, $dn, '(objectClass=*)', ['uid']);
-
-        if ($res === false) {
-            if (ldap_errno($this->conn) === 32) { // 32 = No such object
-                return false;
-            }
-            throw new RuntimeException('LDAP lookup failed: ' . ldap_error($this->conn));
+        $aff = [];
+        for ($i = 0; $i < ($e['edupersonaffiliation']['count'] ?? 0); $i++) {
+            $aff[] = $e['edupersonaffiliation'][$i];
         }
-
-        return ldap_count_entries($this->conn, $res) > 0;
+        return $aff;
     }
 
     private function entryToArray(array $e): array
     {
         $get = fn (string $k) => $e[$k][0] ?? '';
+        $aff = $this->affiliationsOf($e);
 
         return [
-            'uid'         => $get('uid'),
-            'givenName'   => $get('givenname'),
-            'sn'          => $get('sn'),
-            'name'        => $get('cn'),
-            'mail'        => $get('mail'),
-            'campusDn'    => $get('edupersonorgunitdn'),
-            'affiliation' => $get('edupersonaffiliation'),
+            'uid'          => $get('uid'),
+            'givenName'    => $get('givenname'),
+            'sn'           => $get('sn'),
+            'name'         => $get('cn'),
+            'mail'         => $get('mail'),
+            'campusDn'     => $get('edupersonorgunitdn'),
+            'affiliations' => $aff,
+            'affiliation'  => $aff[0] ?? '',   // kept for existing views
+            'type'         => $this->typeFromAffiliations($aff),
         ];
     }
 
@@ -280,46 +377,5 @@ class LdapService
     {
         $salt = random_bytes(4);
         return '{SSHA}' . base64_encode(sha1($plain . $salt, true) . $salt);
-    }
-
-
-
-    /**
- * Count students in a single paged pass (only fetches the campus attribute).
- *
- * @return array{total:int, 
- */
-    public function countStudents(): array
-    {
-        $this->ensureConnected();
-
-        $norm   = fn (string $s) => strtolower(preg_replace('/\s*,\s*/', ',', trim($s)));
-        $total  = 0;
-        $counts = [];
-        $cookie = '';
-
-        do {
-            $res = @ldap_search(
-                $this->conn, config('ldap.people_dn'), '(objectClass=inetOrgPerson)',
-                ['eduPersonOrgUnitDN'], 0, 0, 0, LDAP_DEREF_NEVER,
-                [['oid' => LDAP_CONTROL_PAGEDRESULTS, 'value' => ['size' => (int) config('ldap.page_size'), 'cookie' => $cookie]]]
-            );
-            if ($res === false) {
-                throw new RuntimeException('LDAP count failed: ' . ldap_error($this->conn));
-            }
-
-            ldap_parse_result($this->conn, $res, $code, $matched, $message, $referrals, $controls);
-
-            $entries = ldap_get_entries($this->conn, $res);
-            for ($i = 0; $i < $entries['count']; $i++) {
-                $total++;
-                $dn = $norm($entries[$i]['edupersonorgunitdn'][0] ?? '');
-                $counts[$dn] = ($counts[$dn] ?? 0) + 1;
-            }
-
-            $cookie = $controls[LDAP_CONTROL_PAGEDRESULTS]['value']['cookie'] ?? '';
-        } while ($cookie !== '');
-
-        return ['total' => $total, 'byCampus' => $counts];
     }
 }

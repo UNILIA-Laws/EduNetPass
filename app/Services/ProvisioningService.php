@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Mail;
 use Throwable;
 
 /**
- * For every student: 1) create/update in LDAP, 2) e-mail the credentials.
+ * For every user: 1) create/update in LDAP, 2) e-mail the credentials.
  * The e-mail is only sent if LDAP succeeded.
  */
 class ProvisioningService
@@ -18,14 +18,19 @@ class ProvisioningService
     }
 
     /**
-     * @param list<array<string,string>> $rows
+     * @param list<array<string,string>> $rows        may contain an optional 'type' per row
+     * @param string                     $defaultType used for rows without a 'type'
      * @return list<array<string,mixed>> one result per row
      */
-    public function provision(array $rows, string $campusKey): array
+    public function provision(array $rows, string $campusKey, string $defaultType = 'student'): array
     {
         $campusDn = config("ldap.campuses.{$campusKey}.dn");
         if (! $campusDn) {
             throw new \InvalidArgumentException('Unknown campus.');
+        }
+
+        if (! config("ldap.user_types.{$defaultType}")) {
+            throw new \InvalidArgumentException("Unknown user type '{$defaultType}'.");
         }
 
         set_time_limit(0);
@@ -37,6 +42,9 @@ class ProvisioningService
             $this->ldap->connect(); // one connection for the whole batch
 
             foreach ($rows as $i => $row) {
+                $given       = strtolower(trim((string) ($row['type'] ?? '')));
+                $row['type'] = $given !== '' ? $given : $defaultType;
+
                 $result = $this->provisionOne($row, $campusDn, $seen);
                 $result['line'] = $i + 2; // +2 = header row + 1-based
                 $results[] = $result;
@@ -52,6 +60,7 @@ class ProvisioningService
     {
         $r = [
             'uid'   => $row['uid'] ?? '',
+            'type'  => $row['type'],
             'name'  => trim(($row['givenName'] ?? '') . ' ' . ($row['sn'] ?? '')),
             'mail'  => $row['mail'] ?? '',
             'ldap'  => 'skipped',
@@ -75,17 +84,17 @@ class ProvisioningService
 
         // ---- LDAP -----------------------------------------------------
         try {
-            $r['ldap'] = $this->ldap->upsertStudent([
+            $r['ldap'] = $this->ldap->upsertUser([
                 'uid'       => $row['uid'],
                 'givenName' => $row['givenName'],
                 'sn'        => $row['sn'],
                 'mail'      => $row['mail'],
                 'password'  => $password,
-            ], $campusDn);
+            ], $campusDn, $row['type']);
         } catch (Throwable $e) {
             $r['ldap']  = 'failed';
             $r['error'] = $e->getMessage();
-            Log::warning('eduroam.provision ldap failed', ['uid' => $row['uid'], 'error' => $e->getMessage()]);
+            Log::warning('eduroam.provision ldap failed', ['uid' => $row['uid'], 'type' => $row['type'], 'error' => $e->getMessage()]);
             return $r;
         }
 
@@ -94,9 +103,11 @@ class ProvisioningService
             Mail::to($row['mail'])->send(new StudentCredentialsMail([
                 'givenName'    => $row['givenName'],
                 'sn'           => $row['sn'],
-                'Reg'          => $row['Reg'] ?? '',
+                'Reg'          => $row['Reg'] ?? '',   // optional, only shown in the e-mail
                 'uid'          => $row['uid'],
                 'userPassword' => $password,
+                'type'         => $row['type'],
+                'typeLabel'    => config("ldap.user_types.{$row['type']}.label", ucfirst($row['type'])),
             ]));
             $r['email'] = 'sent';
         } catch (Throwable $e) {
@@ -106,14 +117,20 @@ class ProvisioningService
             $r['password'] = $password;
         }
 
-        Log::info('eduroam.provision', ['uid' => $row['uid'], 'ldap' => $r['ldap'], 'email' => $r['email']]);
+        Log::info('eduroam.provision', ['uid' => $row['uid'], 'type' => $row['type'], 'ldap' => $r['ldap'], 'email' => $r['email']]);
 
         return $r;
     }
 
     private function validate(array $row): ?string
     {
-        foreach (['givenName', 'sn', 'uid', 'mail'] as $f) {
+        $type = config("ldap.user_types.{$row['type']}");
+        if (! $type) {
+            return "Unknown user type '{$row['type']}'.";
+        }
+
+        // 'Reg' is never required; the required fields come from the type config.
+        foreach ($type['required'] ?? ['givenName', 'sn', 'uid', 'mail'] as $f) {
             if (($row[$f] ?? '') === '') {
                 return "Missing {$f}.";
             }

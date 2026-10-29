@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 use Throwable;
 
 /**
- * Browse users stored in LDAP, edit their details, reset their password.
+ * Browse users stored in LDAP (all types), edit their details, reset their password.
  */
 class UserController extends Controller
 {
@@ -23,14 +23,21 @@ class UserController extends Controller
 
     public function index(Request $request)
     {
+        $types     = config('ldap.user_types');
         $q         = trim((string) $request->query('q', ''));
         $campusKey = (string) $request->query('campus', '');
         $campusDn  = config("ldap.campuses.{$campusKey}.dn");
 
+        // Unknown type values in the URL are ignored
+        $typeKey = (string) $request->query('type', '');
+        if (! isset($types[$typeKey])) {
+            $typeKey = '';
+        }
+
         $users = [];
         $error = null;
         try {
-            $users = $this->ldap->searchStudents($q, $campusDn);
+            $users = $this->ldap->searchStudents($q, $campusDn, $typeKey ?: null);
         } catch (Throwable $e) {
             $error = $e->getMessage();
             Log::error('eduroam.users list failed', ['error' => $e->getMessage()]);
@@ -51,7 +58,9 @@ class UserController extends Controller
             'users'     => $paginator,
             'q'         => $q,
             'campusKey' => $campusKey,
+            'typeKey'   => $typeKey,
             'campuses'  => config('ldap.campuses'),
+            'types'     => $types,
             'error'     => $error,
             'capped'    => count($users) >= (int) config('ldap.max_list'),
         ]);
@@ -64,6 +73,7 @@ class UserController extends Controller
         return view('users.edit', [
             'user'      => $user,
             'campuses'  => config('ldap.campuses'),
+            'types'     => config('ldap.user_types'),
             'campusKey' => $this->campusKeyFor($user['campusDn']),
         ]);
     }
@@ -121,6 +131,10 @@ class UserController extends Controller
                     'sn'           => $user['sn'],
                     'uid'          => $uid,
                     'userPassword' => $password,
+                    'type'         => $user['type'],
+                    'typeLabel'    => $user['type']
+                        ? config("ldap.user_types.{$user['type']}.label")
+                        : 'User',
                 ]));
                 $reset['emailed']  = true;
                 $reset['password'] = null; // delivered by e-mail, no need to show it
@@ -132,10 +146,25 @@ class UserController extends Controller
         }
 
         Log::info('eduroam.user password reset', [
-            'uid' => $uid, 'emailed' => $reset['emailed'], 'by' => $request->user()?->email,
+            'uid' => $uid, 'type' => $user['type'], 'emailed' => $reset['emailed'], 'by' => $request->user()?->email,
         ]);
 
         return back()->with('reset', $reset);
+    }
+
+    public function destroy(Request $request, string $uid)
+    {
+        $user = $this->findOrFail($uid);
+
+        try {
+            $this->ldap->deleteStudent($uid);
+        } catch (Throwable $e) {
+            return back()->withErrors(['ldap' => $e->getMessage()]);
+        }
+
+        Log::info('eduroam.user deleted', ['uid' => $uid, 'type' => $user['type'], 'by' => $request->user()?->email]);
+
+        return back()->with('status', "User {$uid} deleted.");
     }
 
     private function findOrFail(string $uid): array
@@ -160,21 +189,5 @@ class UserController extends Controller
             }
         }
         return null;
-    }
-
-
-    public function destroy(Request $request, string $uid)
-    {
-        $this->findOrFail($uid);
-
-        try {
-            $this->ldap->deleteStudent($uid);
-        } catch (Throwable $e) {
-            return back()->withErrors(['ldap' => $e->getMessage()]);
-        }
-
-        Log::info('eduroam.user deleted', ['uid' => $uid, 'by' => $request->user()?->email]);
-
-        return back()->with('status', "User {$uid} deleted.");
     }
 }

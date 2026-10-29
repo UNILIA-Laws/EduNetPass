@@ -17,18 +17,22 @@ class ProvisioningController extends Controller
 {
     public function showForm()
     {
-        return view('upload', ['campuses' => config('ldap.campuses')]);
+        return view('upload', [
+            'campuses' => config('ldap.campuses'),
+            'types'    => config('ldap.user_types'),
+        ]);
     }
 
-    /** Add ONE student from the web form. */
+    /** Add ONE user (any type) from the web form. */
     public function storeSingle(Request $request, ProvisioningService $service)
     {
         $data = $request->validate([
+            'type'         => ['required', Rule::in(array_keys(config('ldap.user_types')))],
             'givenName'    => 'required|string|max:100',
             'sn'           => 'required|string|max:100',
             'uid'          => ['required', 'regex:/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/'],
             'mail'         => 'required|email|max:255',
-            'Reg'          => 'nullable|string|max:50',
+            'Reg'          => 'nullable|string|max:50',   // optional, only used in the e-mail
             'userPassword' => 'nullable|string|min:8|max:100',
             'campus'       => ['required', Rule::in(array_keys(config('ldap.campuses')))],
         ], [
@@ -43,7 +47,7 @@ class ProvisioningController extends Controller
                 'mail'         => trim($data['mail']),
                 'Reg'          => trim($data['Reg'] ?? ''),
                 'userPassword' => $data['userPassword'] ?? '',
-            ]], $data['campus']);
+            ]], $data['campus'], $data['type']);
         } catch (Throwable $e) {
             return back()->with('tab', 'single')
                 ->withInput($request->except('userPassword'))
@@ -53,17 +57,18 @@ class ProvisioningController extends Controller
         return back()->with('tab', 'single')->with('results', $results);
     }
 
-    /** Bulk: CSV / XLSX upload. */
+    /** Bulk: CSV / XLSX upload. A "type" column in the file overrides the dropdown per row. */
     public function upload(Request $request, ProvisioningService $service, StudentFileReader $reader)
     {
         $request->validate([
             'csv_file' => 'required|file|extensions:csv,txt,xlsx|max:5120',
             'campus'   => ['required', Rule::in(array_keys(config('ldap.campuses')))],
+            'type'     => ['required', Rule::in(array_keys(config('ldap.user_types')))],
         ]);
 
         try {
             $rows    = $reader->read($request->file('csv_file'));
-            $results = $service->provision($rows, $request->input('campus'));
+            $results = $service->provision($rows, $request->input('campus'), $request->input('type'));
         } catch (InvalidArgumentException $e) {
             return back()->with('tab', 'bulk')->withErrors(['csv_file' => $e->getMessage()]);
         } catch (Throwable $e) {
@@ -78,10 +83,11 @@ class ProvisioningController extends Controller
 
     public function downloadSample()
     {
-        $columns = ['givenName', 'sn', 'Reg', 'mail', 'uid', 'userPassword'];
+        $columns = ['givenName', 'sn', 'Reg', 'mail', 'uid', 'userPassword', 'type'];
         $sample  = [
-            ['John', 'Doe', 'BEH/01/001/24', 'john.doe@unilia.ac.mw', 'beh-01-001-24', 'beh-01-001-24'],
-            ['Jane', 'Smith', 'BEH/01/002/24', 'jane.smith@unilia.ac.mw', 'beh-01-002-24', ''], // blank = auto-generate
+            ['John', 'Doe', 'BEH/01/001/24', 'john.doe@unilia.ac.mw', 'beh-01-001-24', 'beh-01-001-24', 'student'],
+            ['Jane', 'Smith', '', 'jane.smith@unilia.ac.mw', 'jsmith', '', 'staff'], // blank password = auto-generate, Reg is optional
+            ['Mary', 'Banda', '', 'mary.banda@unilia.ac.mw', 'mbanda', '', ''],       // blank type = dropdown default
         ];
 
         return response()->streamDownload(function () use ($columns, $sample) {
@@ -91,17 +97,17 @@ class ProvisioningController extends Controller
                 fputcsv($out, $row, ',', '"', '\\');
             }
             fclose($out);
-        }, 'sample_students.csv', ['Content-Type' => 'text/csv']);
+        }, 'sample_users.csv', ['Content-Type' => 'text/csv']);
     }
 
-    /** Same log file as before, now with LDAP status. Passwords are never written to it. */
+    /** Log file with LDAP status. Passwords are never written to it. */
     private function sendLogToIct(array $results, ?string $by): void
     {
         $lines = ["=== Eduroam Bulk Provisioning Log ===", 'Date: ' . now(), 'Run by: ' . ($by ?? 'n/a'), ''];
         foreach ($results as $r) {
             $lines[] = sprintf(
-                '%-22s %-32s LDAP: %-8s E-mail: %-8s %s',
-                $r['uid'], $r['mail'], $r['ldap'], $r['email'], $r['error'] ?? ''
+                '%-22s %-8s %-32s LDAP: %-8s E-mail: %-8s %s',
+                $r['uid'], $r['type'] ?? '', $r['mail'], $r['ldap'], $r['email'], $r['error'] ?? ''
             );
         }
 

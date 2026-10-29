@@ -1,7 +1,7 @@
 @php
     $u = auth()->user();
     $initials = $u
-        ? collect(preg_split('/\s+/', trim($u->name)))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('')
+        ? collect(preg_split('/\s+/', trim($u->name ?? '')))->filter()->take(2)->map(fn ($p) => mb_strtoupper(mb_substr($p, 0, 1)))->implode('')
         : '';
 
     // Items with a 'route' are live. Items with only 'href' => '#' are placeholders to wire up later.
@@ -10,17 +10,17 @@
         ['route' => 'dashboard', 'active' => request()->routeIs('dashboard'), 'icon' => 'fa-gauge-high', 'label' => 'Dashboard'],
 
         ['heading' => 'Directory'],
-        ['route' => 'enroll',      'active' => request()->routeIs('enroll'),                                        'icon' => 'fa-user-plus',     'label' => 'Add LDAP users'],
-        ['route' => 'users.index', 'active' => request()->routeIs('users.*') && !request()->routeIs('users.store'), 'icon' => 'fa-address-book', 'label' => 'View LDAP users'],
-        ['route' => 'groups.index', 'active' => request()->routeIs('groups.*'), 'icon' => 'fa-people-group', 'label' => 'LDAP groups'],
-        ['route' => 'ous.index',    'active' => request()->routeIs('ous.*'),    'icon' => 'fa-sitemap',      'label' => 'Organizational units'],
-        ['href' => '#',            'active' => false,                                                               'icon' => 'fa-file-import',   'label' => 'Bulk import'],
-        ['route' => 'campuses.index', 'active' => request()->routeIs('campuses.*'),                                 'icon' => 'fa-building-columns', 'label' => 'Campuses'],
+        ['route' => 'enroll',         'active' => request()->routeIs('enroll'),                                        'icon' => 'fa-user-plus',        'label' => 'Add LDAP user'],
+        ['route' => 'enroll.bulk',    'active' => request()->routeIs('enroll.bulk'),                                   'icon' => 'fa-file-import',      'label' => 'Bulk import'],
+        ['route' => 'users.index',    'active' => request()->routeIs('users.*') && ! request()->routeIs('users.store'), 'icon' => 'fa-address-book',    'label' => 'View LDAP users'],
+        ['route' => 'campuses.index', 'active' => request()->routeIs('campuses.*'),                                    'icon' => 'fa-building-columns', 'label' => 'Campuses'],
+        ['route' => 'groups.index',   'active' => request()->routeIs('groups.*'),                                      'icon' => 'fa-people-group',     'label' => 'LDAP groups'],
+        ['route' => 'ous.index',      'active' => request()->routeIs('ous.*'),                                         'icon' => 'fa-sitemap',          'label' => 'Organizational units'],
 
         ['heading' => 'Administration'],
-        ['route' => 'staff.index', 'active' => request()->routeIs('staff.*'),                                       'icon' => 'fa-user-gear',     'label' => 'System users'],
-        ['href' => '#',            'active' => false,                                                               'icon' => 'fa-clipboard-list','label' => 'Audit logs'],
-        ['href' => '#',            'active' => false,                                                               'icon' => 'fa-server',        'label' => 'LDAP server settings'],
+        ['route' => 'staff.index', 'active' => request()->routeIs('staff.*'),                                          'icon' => 'fa-user-gear',        'label' => 'System users'],
+        ['href' => '#',            'active' => false,                                                                  'icon' => 'fa-clipboard-list',   'label' => 'Audit logs'],
+        ['href' => '#',            'active' => false,                                                                  'icon' => 'fa-server',           'label' => 'LDAP server settings'],
     ];
 @endphp
 

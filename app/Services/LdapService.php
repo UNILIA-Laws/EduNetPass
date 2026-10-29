@@ -106,7 +106,7 @@ class LdapService
 
         $this->ensureConnected();
 
-        $res = @ldap_list($this->conn, $this->campusesDn(), '(objectClass=organizationalUnit)', ['ou']);
+        $res = @ldap_list($this->conn, $this->campusesDn(), '(objectClass=organizationalUnit)', ['ou', 'description']);
         if ($res === false) {
             if (ldap_errno($this->conn) === 32) {
                 throw new RuntimeException(
@@ -127,6 +127,7 @@ class LdapService
             $campuses[strtolower($ou)] = [
                 'label' => ucwords(str_replace(['-', '_'], ' ', $ou)) . (string) config('ldap.campus_label_suffix', ''),
                 'dn'    => $entries[$i]['dn'],
+                'description' => $entries[$i]['description'][0] ?? '',
             ];
         }
         uasort($campuses, fn ($a, $b) => strcasecmp($a['label'], $b['label']));

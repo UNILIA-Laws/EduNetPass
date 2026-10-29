@@ -2,71 +2,132 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Campus;
+use App\Services\LdapDirectoryService;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
+/**
+ * Campuses are the organizational units directly under ldap.campuses_dn.
+ * Nothing is stored in the application database or in config.
+ * The {campus} route parameter is the campus key (the lower-case OU name).
+ */
 class CampusController extends Controller
 {
+    public function __construct(private LdapDirectoryService $ldap)
+    {
+    }
+
     public function index()
     {
-        $campuses = Campus::withCount('users')
-            ->orderBy('sort_order')
-            ->orderBy('label')
-            ->get();
+        $rows  = [];
+        $error = null;
 
-        return view('campuses.index', compact('campuses'));
+        try {
+            $counts = $this->ldap->campusUserCounts();
+            foreach ($this->ldap->campuses() as $key => $c) {
+                $rows[] = $c + ['key' => $key, 'users' => $counts[$key] ?? 0];
+            }
+        } catch (Throwable $e) {
+            $error = $e->getMessage();
+            Log::error('eduroam.campuses list failed', ['error' => $error]);
+        }
+
+        return view('campuses.index', [
+            'campuses'  => $rows,
+            'error'     => $error,
+            'container' => $this->ldap->campusesDn(),
+        ]);
     }
 
     public function create()
     {
-        return view('campuses.create');
+        return view('campuses.create', ['container' => $this->ldap->campusesDn()]);
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'key'        => ['required', 'alpha_dash', 'max:255', 'unique:campuses,key'],
-            'label'      => ['required', 'string', 'max:255', 'unique:campuses,label'],
-            'dn'         => ['required', 'string', 'max:255', 'unique:campuses,dn'],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'name'        => ['required', 'regex:/^[A-Za-z0-9][A-Za-z0-9_-]{0,62}$/'],
+            'description' => 'nullable|string|max:255',
+        ], [
+            'name.regex' => 'Use letters, numbers, dash and underscore only (no spaces).',
         ]);
 
-        $data['sort_order'] = $data['sort_order'] ?? 0;
-        $data['is_active']  = $request->boolean('is_active');
+        $name = strtolower(trim($data['name']));
 
-        Campus::create($data);
+        try {
+            $this->ldap->createCampus($name, trim($data['description'] ?? ''));
+        } catch (Throwable $e) {
+            return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
+        }
 
-        return redirect()->route('campuses.index')->with('status', 'Campus created.');
+        Log::info('eduroam.campus created', ['campus' => $name, 'by' => $request->user()?->email]);
+
+        return redirect()->route('campuses.index')->with('status', "Campus '{$name}' created.");
     }
 
-    public function edit(Campus $campus)
+    public function edit(string $campus)
     {
-        return view('campuses.edit', compact('campus'));
+        $row = $this->findOrFail($campus);
+
+        try {
+            $users = $this->ldap->campusUserCounts()[$campus] ?? 0;
+        } catch (Throwable $e) {
+            $users = null;
+        }
+
+        return view('campuses.edit', [
+            'campus' => $row + ['key' => $campus],
+            'users'  => $users,
+        ]);
     }
 
-    public function update(Request $request, Campus $campus)
+    public function update(Request $request, string $campus)
     {
-        // "key" is a stable slug, so it is not editable
+        $this->findOrFail($campus);
+
         $data = $request->validate([
-            'label'      => ['required', 'string', 'max:255', Rule::unique('campuses', 'label')->ignore($campus->id)],
-            'dn'         => ['required', 'string', 'max:255', Rule::unique('campuses', 'dn')->ignore($campus->id)],
-            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'description' => 'nullable|string|max:255',
         ]);
 
-        $data['sort_order'] = $data['sort_order'] ?? 0;
-        $data['is_active']  = $request->boolean('is_active');
+        try {
+            $this->ldap->updateCampusDescription($campus, trim($data['description'] ?? ''));
+        } catch (Throwable $e) {
+            return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
+        }
 
-        $campus->update($data);
+        Log::info('eduroam.campus updated', ['campus' => $campus, 'by' => $request->user()?->email]);
 
-        return redirect()->route('campuses.index')->with('status', 'Campus updated.');
+        return redirect()->route('campuses.index')->with('status', "Campus '{$campus}' updated.");
     }
 
-    public function destroy(Campus $campus)
+    public function destroy(Request $request, string $campus)
     {
-        // Users are un-assigned automatically (nullOnDelete in the migration)
-        $campus->delete();
+        $this->findOrFail($campus);
 
-        return redirect()->route('campuses.index')->with('status', 'Campus deleted.');
+        try {
+            $this->ldap->deleteCampus($campus);
+        } catch (Throwable $e) {
+            return back()->withErrors(['ldap' => $e->getMessage()]);
+        }
+
+        Log::info('eduroam.campus deleted', ['campus' => $campus, 'by' => $request->user()?->email]);
+
+        return redirect()->route('campuses.index')->with('status', "Campus '{$campus}' deleted.");
+    }
+
+    /** @return array{label:string,dn:string,description:string} */
+    private function findOrFail(string $key): array
+    {
+        try {
+            $campus = $this->ldap->campuses()[$key] ?? null;
+        } catch (Throwable $e) {
+            abort(503, $e->getMessage());
+        }
+
+        abort_if($campus === null, 404, 'Campus not found in LDAP.');
+
+        return $campus;
     }
 }

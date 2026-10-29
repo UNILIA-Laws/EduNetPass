@@ -2,73 +2,107 @@
 @section('title', 'eduroam | Campuses')
 
 @section('content')
-<div class="container-xl py-4 py-lg-5">
+@include('partials.usr-style')
 
-    <div class="mb-3">
-        <h1 class="h3 fw-bold mb-1">Campuses</h1>
-        <p class="text-muted mb-0">Manage the campuses users can be assigned to.</p>
-    </div>
+<div class="usr">
+<div class="container">
 
-    @include('partials.admin-tabs')
+    @include('users._alerts')
 
-    @if(session('status'))
-        <div class="flash ok"><i class="fa-solid fa-circle-check mt-1"></i><span>{{ session('status') }}</span></div>
+    @if($error)
+        <div class="note bad"><i class="fa-solid fa-triangle-exclamation mt-1"></i><span>Could not read campuses from LDAP: {{ $error }}</span></div>
     @endif
 
-    <div class="set-card">
-        <div class="head">
-            <h2>
-                <i class="fa-solid fa-building-columns"></i>Campuses
-                <span class="text-muted fw-normal small">({{ $campuses->count() }})</span>
-            </h2>
-            <a href="{{ route('campuses.create') }}" class="btn btn-eduroam btn-sm px-3 d-flex align-items-center">
-                <i class="fa-solid fa-plus me-2"></i>Add campus
-            </a>
+    <div class="usr-head">
+        <div>
+            <h1 class="usr-title">Campuses</h1>
+            <p class="usr-sub">Each campus is an organizational unit under <code>{{ $container }}</code>.</p>
         </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="count">{{ count($campuses) }} campus{{ count($campuses) === 1 ? '' : 'es' }}</span>
+            <a href="{{ route('campuses.create') }}" class="btn-primary-soft text-decoration-none"><i class="fa-solid fa-plus me-2"></i>Add campus</a>
+        </div>
+    </div>
 
+    <div class="panel">
         <div class="table-responsive">
-            <table class="table align-middle mb-0" style="font-size:.88rem">
-                <thead class="table-light">
-                    <tr>
-                        <th class="ps-4">Label</th>
-                        <th>Key</th>
-                        <th>DN</th>
-                        <th>Order</th>
-                        <th>Status</th>
-                        <th>Users</th>
-                        <th class="text-end pe-4">Actions</th>
-                    </tr>
+            <table class="tbl">
+                <thead>
+                    <tr><th>Campus</th><th>Description</th><th>Users</th><th class="text-end">Actions</th></tr>
                 </thead>
                 <tbody>
-                @forelse($campuses as $campus)
+                @forelse($campuses as $c)
                     <tr>
-                        <td class="ps-4 fw-semibold">{{ $campus->label }}</td>
-                        <td><code>{{ $campus->key }}</code></td>
-                        <td class="text-muted small">{{ $campus->dn }}</td>
-                        <td>{{ $campus->sort_order }}</td>
                         <td>
-                            <span class="pill {{ $campus->is_active ? 'admin' : 'off' }}">
-                                {{ $campus->is_active ? 'Active' : 'Inactive' }}
-                            </span>
+                            <div class="ou">
+                                <span class="ou-ico root"><i class="fa-solid fa-building-columns"></i></span>
+                                <div>
+                                    <div class="nm">{{ $c['label'] }}</div>
+                                    <div class="dn">{{ $c['dn'] }}</div>
+                                </div>
+                            </div>
                         </td>
-                        <td>{{ $campus->users_count }}</td>
-                        <td class="text-end pe-4 text-nowrap">
-                            <a href="{{ route('campuses.edit', $campus) }}" class="icon-btn" title="Edit">
-                                <i class="fa-solid fa-pen"></i>
+                        <td class="desc">{{ $c['description'] ?: '-' }}</td>
+                        <td>
+                            <a href="{{ route('users.index', ['campus' => $c['key']]) }}" class="chip campus text-decoration-none">
+                                {{ number_format($c['users']) }} user{{ $c['users'] === 1 ? '' : 's' }}
                             </a>
-                            <form action="{{ route('campuses.destroy', $campus) }}" method="POST" class="d-inline"
-                                  onsubmit="return confirm('Delete {{ addslashes($campus->label) }}? Its {{ $campus->users_count }} user(s) will be un-assigned.')">
-                                @csrf @method('DELETE')
-                                <button class="icon-btn danger" title="Delete"><i class="fa-solid fa-trash"></i></button>
-                            </form>
+                        </td>
+                        <td>
+                            <div class="acts">
+                                <a href="{{ route('campuses.edit', $c['key']) }}" class="act edit"><i class="fa-solid fa-pen"></i>Edit</a>
+                                @if($c['users'] > 0)
+                                    <span class="lock" title="Move its users to another campus before deleting"><i class="fa-solid fa-lock"></i>In use</span>
+                                @else
+                                    <button type="button" class="act del js-delete" data-key="{{ $c['key'] }}" data-name="{{ $c['label'] }}" aria-label="Delete {{ $c['label'] }}">
+                                        <i class="fa-solid fa-trash"></i>Delete
+                                    </button>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center text-muted py-4">No campuses yet.</td></tr>
+                    <tr><td colspan="4" class="empty"><i class="fa-solid fa-building-circle-xmark"></i>No campuses yet. Add the first one.</td></tr>
                 @endforelse
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+</div>
+
+{{-- Delete confirmation modal --}}
+<div class="modal fade usr-modal" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="POST" action="" id="deleteForm" class="modal-content">
+            @csrf
+            @method('DELETE')
+            <div class="modal-header">
+                <h5 class="modal-title"><span class="ico danger"><i class="fa-solid fa-trash"></i></span>Delete campus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Delete the campus <strong id="deleteName"></strong>?</p>
+                <p class="mb-0">The organizational unit is removed from LDAP. It has no users, so no accounts are affected. This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-danger-soft px-4">Yes, delete</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+    const deleteUrlTemplate = @json(route('campuses.destroy', ['campus' => '__KEY__']));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    document.querySelectorAll('.js-delete').forEach(btn => btn.addEventListener('click', () => {
+        document.getElementById('deleteForm').action = deleteUrlTemplate.replace('__KEY__', encodeURIComponent(btn.dataset.key));
+        document.getElementById('deleteName').textContent = btn.dataset.name;
+        deleteModal.show();
+    }));
+</script>
+@endpush

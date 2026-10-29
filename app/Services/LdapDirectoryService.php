@@ -333,4 +333,88 @@ class LdapDirectoryService extends LdapService
 
         $this->forgetCampuses();
     }
+
+    /* ------------------------------------------------------------------
+     |  Campuses (OUs directly under the campuses container)
+     * -----------------------------------------------------------------*/
+
+    /** Create the campuses container itself if it does not exist yet. */
+    private function ensureCampusesContainer(): void
+    {
+        $dn  = $this->campusesDn();
+        $res = @ldap_read($this->conn, $dn, '(objectClass=*)', ['ou']);
+        if ($res !== false) {
+            return;
+        }
+        if (ldap_errno($this->conn) !== 32) {
+            throw new RuntimeException('Could not check the campuses container: ' . ldap_error($this->conn));
+        }
+        if (! preg_match('/^ou=([^,]+),\s*(.+)$/i', $dn, $m)) {
+            throw new RuntimeException("Cannot create the campuses container from '{$dn}'.");
+        }
+        $this->createOu(stripslashes($m[1]), $m[2]);
+    }
+
+    /** Create a campus. The name becomes the OU name (lower-case) and the campus key. */
+    public function createCampus(string $name, string $description = ''): void
+    {
+        $this->ensureConnected();
+        $this->ensureCampusesContainer();
+        $this->createOu(strtolower($name), $this->campusesDn(), $description);
+    }
+
+    /** @return array<string,int> campus key => number of users assigned to it */
+    public function campusUserCounts(): array
+    {
+        $byDn = $this->countStudents()['byCampus'];
+        $out  = [];
+        foreach ($this->campuses() as $key => $c) {
+            $out[$key] = $byDn[$this->norm($c['dn'])] ?? 0;
+        }
+        return $out;
+    }
+
+    /** Only the description can change; renaming would change the DN every user stores. */
+    public function updateCampusDescription(string $key, string $description): void
+    {
+        $this->ensureConnected();
+
+        $campus = $this->campuses()[$key] ?? null;
+        if (! $campus) {
+            throw new RuntimeException('Campus not found.');
+        }
+
+        // An empty array removes the attribute
+        $value = $description !== '' ? [$description] : [];
+        if (! @ldap_mod_replace($this->conn, $campus['dn'], ['description' => $value])) {
+            throw new RuntimeException('Could not update the campus: ' . ldap_error($this->conn));
+        }
+
+        $this->forgetCampuses();
+    }
+
+    /** Delete a campus, but only if no user is assigned to it. */
+    public function deleteCampus(string $key): void
+    {
+        $this->ensureConnected();
+
+        $campus = $this->campuses()[$key] ?? null;
+        if (! $campus) {
+            throw new RuntimeException('Campus not found.');
+        }
+
+        $users = $this->campusUserCounts()[$key] ?? 0;
+        if ($users > 0) {
+            throw new RuntimeException("{$users} user(s) still belong to this campus. Move them to another campus first.");
+        }
+
+        if (! @ldap_delete($this->conn, $campus['dn'])) {
+            if (ldap_errno($this->conn) === 66) { // not allowed on non-leaf
+                throw new RuntimeException('The campus OU contains other entries. Remove them first.');
+            }
+            throw new RuntimeException('Could not delete the campus: ' . ldap_error($this->conn));
+        }
+
+        $this->forgetCampuses();
+    }
 }

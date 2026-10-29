@@ -21,28 +21,28 @@ Route::middleware('auth')->group(function () {
     // Landing page after login
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Campus management
+    // Campus management (declared once; the duplicate block and the "'  create'" typo are removed)
     Route::get('/campuses', [CampusController::class, 'index'])->name('campuses.index');
-    Route::get('/campuses/create', [CampusController::class, '  create'])->name('campuses.create');
+    Route::get('/campuses/create', [CampusController::class, 'create'])->name('campuses.create');
     Route::post('/campuses', [CampusController::class, 'store'])->name('campuses.store');
     Route::get('/campuses/{campus}/edit', [CampusController::class, 'edit'])->name('campuses.edit');
     Route::put('/campuses/{campus}', [CampusController::class, 'update'])->name('campuses.update');
     Route::delete('/campuses/{campus}', [CampusController::class, 'destroy'])->name('campuses.destroy');
 
+    // Groups
+    Route::get('/groups',                       [GroupController::class, 'index'])->name('groups.index');
+    Route::post('/groups',                      [GroupController::class, 'store'])->name('groups.store');
+    Route::get('/groups/{cn}',                  [GroupController::class, 'show'])->name('groups.show');
+    Route::delete('/groups/{cn}',               [GroupController::class, 'destroy'])->name('groups.destroy');
+    Route::post('/groups/{cn}/members',         [GroupController::class, 'addMember'])->name('groups.members.store');
+    Route::delete('/groups/{cn}/members/{uid}', [GroupController::class, 'removeMember'])->name('groups.members.destroy');
 
-    Route::get('/groups',                      [GroupController::class, 'index'])->name('groups.index');
-    Route::post('/groups',                     [GroupController::class, 'store'])->name('groups.store');
-    Route::get('/groups/{cn}',                 [GroupController::class, 'show'])->name('groups.show');
-    Route::delete('/groups/{cn}',              [GroupController::class, 'destroy'])->name('groups.destroy');
-    Route::post('/groups/{cn}/members',        [GroupController::class, 'addMember'])->name('groups.members.store');
-    Route::delete('/groups/{cn}/members/{uid}',[GroupController::class, 'removeMember'])->name('groups.members.destroy');
+    // Organizational units
+    Route::get('/ous',    [OuController::class, 'index'])->name('ous.index');
+    Route::post('/ous',   [OuController::class, 'store'])->name('ous.store');
+    Route::delete('/ous', [OuController::class, 'destroy'])->name('ous.destroy');
 
-    Route::get('/ous',      [OuController::class, 'index'])->name('ous.index');
-    Route::post('/ous',     [OuController::class, 'store'])->name('ous.store');
-    Route::delete('/ous',   [OuController::class, 'destroy'])->name('ous.destroy');
-
-
-    // Add students (moved from "/" to "/enroll")
+    // Add users (any type): single form and bulk upload
     Route::get('/enroll', [ProvisioningController::class, 'showForm'])->name('enroll');
     Route::get('/enroll/bulk', [ProvisioningController::class, 'bulkUpload'])->name('enroll.bulk');
     Route::post('/users', [ProvisioningController::class, 'storeSingle'])->name('users.store');
@@ -64,17 +64,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/staff/{user}/edit', [StaffController::class, 'edit'])->name('staff.edit');
     Route::put('/staff/{user}', [StaffController::class, 'update'])->name('staff.update');
     Route::delete('/staff/{user}', [StaffController::class, 'destroy'])->name('staff.destroy');
-
-
-        // Campus management
-    Route::get('/campuses', [CampusController::class, 'index'])->name('campuses.index');
-    Route::get('/campuses/create', [CampusController::class, 'create'])->name('campuses.create');
-    Route::post('/campuses', [CampusController::class, 'store'])->name('campuses.store');
-    Route::get('/campuses/{campus}/edit', [CampusController::class, 'edit'])->name('campuses.edit');
-    Route::put('/campuses/{campus}', [CampusController::class, 'update'])->name('campuses.update');
-    Route::delete('/campuses/{campus}', [CampusController::class, 'destroy'])->name('campuses.destroy');
-
-    
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

@@ -16,24 +16,37 @@ use Throwable;
 
 class ProvisioningController extends Controller
 {
+    /** GET /enroll : add ONE user */
     public function showForm(LdapService $ldap)
+    {
+        return $this->formView('users.create', $ldap);
+    }
+
+    /** GET /enroll/bulk : upload a CSV / XLSX */
+    public function bulkUpload(LdapService $ldap)
+    {
+        return $this->formView('users.bulk', $ldap);
+    }
+
+    /** Both pages need the campuses (read from LDAP) and the user types. */
+    private function formView(string $view, LdapService $ldap)
     {
         $campuses = [];
         $error    = null;
 
         try {
-            $campuses = $ldap->campuses();   // read from the LDAP server
+            $campuses = $ldap->campuses();
         } catch (Throwable $e) {
             $error = $e->getMessage();
             Log::error('eduroam.campuses failed', ['error' => $error]);
         }
 
-        $view = view('upload', [
+        $page = view($view, [
             'campuses' => $campuses,
             'types'    => config('ldap.user_types'),
         ]);
 
-        return $error ? $view->withErrors(['ldap' => $error]) : $view;
+        return $error ? $page->withErrors(['ldap' => $error]) : $page;
     }
 
     /** Add ONE user (any type) from the web form. */

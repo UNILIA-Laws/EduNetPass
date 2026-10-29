@@ -14,6 +14,7 @@ use Throwable;
 
 /**
  * Browse users stored in LDAP (all types), edit their details, reset their password.
+ * Campuses are read from the directory (OUs under ldap.campuses_dn).
  */
 class UserController extends Controller
 {
@@ -26,7 +27,6 @@ class UserController extends Controller
         $types     = config('ldap.user_types');
         $q         = trim((string) $request->query('q', ''));
         $campusKey = (string) $request->query('campus', '');
-        $campusDn  = config("ldap.campuses.{$campusKey}.dn");
 
         // Unknown type values in the URL are ignored
         $typeKey = (string) $request->query('type', '');
@@ -34,9 +34,13 @@ class UserController extends Controller
             $typeKey = '';
         }
 
-        $users = [];
-        $error = null;
+        $campuses = [];
+        $users    = [];
+        $error    = null;
         try {
+            $campuses = $this->ldap->campuses();
+            $campusDn = $campuses[$campusKey]['dn'] ?? null;
+
             $users = $this->ldap->searchStudents($q, $campusDn, $typeKey ?: null);
         } catch (Throwable $e) {
             $error = $e->getMessage();
@@ -59,7 +63,7 @@ class UserController extends Controller
             'q'         => $q,
             'campusKey' => $campusKey,
             'typeKey'   => $typeKey,
-            'campuses'  => config('ldap.campuses'),
+            'campuses'  => $campuses,
             'types'     => $types,
             'error'     => $error,
             'capped'    => count($users) >= (int) config('ldap.max_list'),
@@ -68,38 +72,46 @@ class UserController extends Controller
 
     public function edit(string $uid)
     {
-        $user = $this->findOrFail($uid);
+        $user     = $this->findOrFail($uid);
+        $campuses = $this->campusesOrFail();
 
         return view('users.edit', [
             'user'      => $user,
-            'campuses'  => config('ldap.campuses'),
+            'campuses'  => $campuses,
             'types'     => config('ldap.user_types'),
-            'campusKey' => $this->campusKeyFor($user['campusDn']),
+            'campusKey' => $this->campusKeyFor($user['campusDn'], $campuses),
         ]);
     }
 
     public function update(Request $request, string $uid)
     {
-        $this->findOrFail($uid);
+        $user     = $this->findOrFail($uid);
+        $campuses = $this->campusesOrFail();
 
         $data = $request->validate([
             'givenName' => 'required|string|max:100',
             'sn'        => 'required|string|max:100',
             'mail'      => 'required|email|max:255',
-            'campus'    => ['required', Rule::in(array_keys(config('ldap.campuses')))],
+            'campus'    => ['required', Rule::in(array_keys($campuses))],
+            'type'      => ['nullable', Rule::in(array_keys(config('ldap.user_types')))],
         ]);
+
+        // Only touch the affiliation when the type was actually changed
+        $newType = (($data['type'] ?? '') !== '' && $data['type'] !== $user['type']) ? $data['type'] : null;
 
         try {
             $this->ldap->updateStudent($uid, [
                 'givenName' => trim($data['givenName']),
                 'sn'        => trim($data['sn']),
                 'mail'      => trim($data['mail']),
-            ], config("ldap.campuses.{$data['campus']}.dn"));
+            ], $campuses[$data['campus']]['dn'], $newType);
         } catch (Throwable $e) {
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.user updated', ['uid' => $uid, 'by' => $request->user()?->email]);
+        Log::info('eduroam.user updated', [
+            'uid' => $uid, 'type_from' => $user['type'], 'type_to' => $newType, 'by' => $request->user()?->email,
+        ]);
 
         return redirect()->route('users.edit', $uid)->with('status', 'Details saved.');
     }
@@ -180,10 +192,20 @@ class UserController extends Controller
         return $user;
     }
 
-    private function campusKeyFor(string $dn): ?string
+    /** @return array<string,array{label:string,dn:string}> */
+    private function campusesOrFail(): array
+    {
+        try {
+            return $this->ldap->campuses();
+        } catch (Throwable $e) {
+            abort(503, $e->getMessage());
+        }
+    }
+
+    private function campusKeyFor(string $dn, array $campuses): ?string
     {
         $norm = fn ($s) => strtolower(preg_replace('/\s*,\s*/', ',', trim($s)));
-        foreach (config('ldap.campuses') as $key => $c) {
+        foreach ($campuses as $key => $c) {
             if ($norm($c['dn']) === $norm($dn)) {
                 return $key;
             }

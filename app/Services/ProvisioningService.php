@@ -19,16 +19,12 @@ class ProvisioningService
 
     /**
      * @param list<array<string,string>> $rows        may contain an optional 'type' per row
+     * @param string                     $campusKey   key from LdapService::campuses()
      * @param string                     $defaultType used for rows without a 'type'
      * @return list<array<string,mixed>> one result per row
      */
     public function provision(array $rows, string $campusKey, string $defaultType = 'student'): array
     {
-        $campusDn = config("ldap.campuses.{$campusKey}.dn");
-        if (! $campusDn) {
-            throw new \InvalidArgumentException('Unknown campus.');
-        }
-
         if (! config("ldap.user_types.{$defaultType}")) {
             throw new \InvalidArgumentException("Unknown user type '{$defaultType}'.");
         }
@@ -40,6 +36,16 @@ class ProvisioningService
 
         try {
             $this->ldap->connect(); // one connection for the whole batch
+
+            // Campuses are read from the directory
+            $campuses = $this->ldap->campuses();
+            $campusDn = $campuses[$campusKey]['dn'] ?? $campuses[strtolower($campusKey)]['dn'] ?? null;
+            if (! $campusDn) {
+                throw new \InvalidArgumentException(
+                    "Unknown campus '{$campusKey}'. Campuses found in LDAP under " . $this->ldap->campusesDn() . ': ' .
+                    (implode(', ', array_keys($campuses)) ?: 'none')
+                );
+            }
 
             foreach ($rows as $i => $row) {
                 $given       = strtolower(trim((string) ($row['type'] ?? '')));

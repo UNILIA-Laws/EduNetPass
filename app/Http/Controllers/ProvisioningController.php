@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\SendLogMail;
+use App\Services\LdapService;
 use App\Services\ProvisioningService;
 use App\Services\StudentFileReader;
 use Illuminate\Http\Request;
@@ -15,17 +16,36 @@ use Throwable;
 
 class ProvisioningController extends Controller
 {
-    public function showForm()
+    public function showForm(LdapService $ldap)
     {
-        return view('upload', [
-            'campuses' => config('ldap.campuses'),
+        $campuses = [];
+        $error    = null;
+
+        try {
+            $campuses = $ldap->campuses();   // read from the LDAP server
+        } catch (Throwable $e) {
+            $error = $e->getMessage();
+            Log::error('eduroam.campuses failed', ['error' => $error]);
+        }
+
+        $view = view('upload', [
+            'campuses' => $campuses,
             'types'    => config('ldap.user_types'),
         ]);
+
+        return $error ? $view->withErrors(['ldap' => $error]) : $view;
     }
 
     /** Add ONE user (any type) from the web form. */
-    public function storeSingle(Request $request, ProvisioningService $service)
+    public function storeSingle(Request $request, ProvisioningService $service, LdapService $ldap)
     {
+        try {
+            $campusKeys = array_keys($ldap->campuses());
+        } catch (Throwable $e) {
+            return back()->with('tab', 'single')->withInput($request->except('userPassword'))
+                ->withErrors(['ldap' => $e->getMessage()]);
+        }
+
         $data = $request->validate([
             'type'         => ['required', Rule::in(array_keys(config('ldap.user_types')))],
             'givenName'    => 'required|string|max:100',
@@ -34,7 +54,7 @@ class ProvisioningController extends Controller
             'mail'         => 'required|email|max:255',
             'Reg'          => 'nullable|string|max:50',   // optional, only used in the e-mail
             'userPassword' => 'nullable|string|min:8|max:100',
-            'campus'       => ['required', Rule::in(array_keys(config('ldap.campuses')))],
+            'campus'       => ['required', Rule::in($campusKeys)],
         ], [
             'uid.regex' => 'Username may only contain letters, numbers, dot, dash and underscore.',
         ]);
@@ -58,11 +78,17 @@ class ProvisioningController extends Controller
     }
 
     /** Bulk: CSV / XLSX upload. A "type" column in the file overrides the dropdown per row. */
-    public function upload(Request $request, ProvisioningService $service, StudentFileReader $reader)
+    public function upload(Request $request, ProvisioningService $service, StudentFileReader $reader, LdapService $ldap)
     {
+        try {
+            $campusKeys = array_keys($ldap->campuses());
+        } catch (Throwable $e) {
+            return back()->with('tab', 'bulk')->withErrors(['ldap' => $e->getMessage()]);
+        }
+
         $request->validate([
             'csv_file' => 'required|file|extensions:csv,txt,xlsx|max:5120',
-            'campus'   => ['required', Rule::in(array_keys(config('ldap.campuses')))],
+            'campus'   => ['required', Rule::in($campusKeys)],
             'type'     => ['required', Rule::in(array_keys(config('ldap.user_types')))],
         ]);
 

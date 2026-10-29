@@ -6,7 +6,7 @@ use RuntimeException;
 
 /**
  * Groups (groupOfNames) and organizational units, built on top of LdapService.
- * Requires LdapService::$conn, ensureConnected() and dnFor() to be `protected`.
+ * Relies on LdapService::$conn, ensureConnected(), dnFor(), baseDn(), campuses() and campusesDn().
  */
 class LdapDirectoryService extends LdapService
 {
@@ -17,16 +17,6 @@ class LdapDirectoryService extends LdapService
     private function norm(string $dn): string
     {
         return strtolower(preg_replace('/\s*,\s*/', ',', trim($dn)));
-    }
-
-    /** Base DN: ldap.base_dn if set, otherwise people_dn without its first RDN. */
-    public function baseDn(): string
-    {
-        $base = (string) config('ldap.base_dn');
-        if ($base !== '') {
-            return $base;
-        }
-        return (string) preg_replace('/^[^,]+,\s*/', '', (string) config('ldap.people_dn'));
     }
 
     private function groupsDn(): string
@@ -228,12 +218,17 @@ class LdapDirectoryService extends LdapService
      |  Organizational units
      * -----------------------------------------------------------------*/
 
-    /** DNs that must never be deleted from the UI. @return list<string> */
+    /**
+     * DNs that must never be deleted from the UI: people, groups, the base,
+     * the campuses container and every campus OU currently in the directory.
+     *
+     * @return list<string>
+     */
     private function protectedDns(): array
     {
-        $dns = [config('ldap.people_dn'), $this->groupsDn(), $this->baseDn()];
-        foreach ((array) config('ldap.campuses') as $c) {
-            $dns[] = $c['dn'] ?? '';
+        $dns = [config('ldap.people_dn'), $this->groupsDn(), $this->baseDn(), $this->campusesDn()];
+        foreach ($this->campuses() as $c) {
+            $dns[] = $c['dn'];
         }
         return array_values(array_filter(array_map(fn ($d) => $this->norm((string) $d), $dns)));
     }
@@ -247,7 +242,7 @@ class LdapDirectoryService extends LdapService
     }
 
     /**
-     * All organizationalUnit entries under ldap.base_dn, parents before children.
+     * All organizationalUnit entries under the base DN, parents before children.
      *
      * @return list<array{dn:string,name:string,description:string,depth:int,locked:bool,campus:bool}>
      */
@@ -262,11 +257,14 @@ class LdapDirectoryService extends LdapService
         }
 
         $baseDepth = count($this->rdns($base));
-        $campusDns = array_map(fn ($c) => $this->norm($c['dn'] ?? ''), (array) config('ldap.campuses'));
+        $entries   = ldap_get_entries($this->conn, $res);
+
+        // Campuses come from the directory itself (children of the campuses container)
+        $this->forgetCampuses();
+        $campusDns = array_map(fn ($c) => $this->norm($c['dn']), $this->campuses());
         $locked    = $this->protectedDns();
 
-        $entries = ldap_get_entries($this->conn, $res);
-        $ous     = [];
+        $ous = [];
         for ($i = 0; $i < $entries['count']; $i++) {
             $dn    = $entries[$i]['dn'];
             $parts = $this->rdns($dn);
@@ -310,6 +308,8 @@ class LdapDirectoryService extends LdapService
             }
             throw new RuntimeException('Could not create OU: ' . ldap_error($this->conn));
         }
+
+        $this->forgetCampuses();
     }
 
     public function deleteOu(string $dn): void
@@ -317,7 +317,7 @@ class LdapDirectoryService extends LdapService
         $this->ensureConnected();
 
         if (in_array($this->norm($dn), $this->protectedDns(), true)) {
-            throw new RuntimeException('This OU is used by the application (people, groups or a campus) and cannot be deleted here.');
+            throw new RuntimeException('This OU is used by the application (people, groups, campuses or a campus) and cannot be deleted here.');
         }
 
         if (! @ldap_delete($this->conn, $dn)) {
@@ -330,5 +330,7 @@ class LdapDirectoryService extends LdapService
             }
             throw new RuntimeException('Could not delete OU: ' . ldap_error($this->conn));
         }
+
+        $this->forgetCampuses();
     }
 }

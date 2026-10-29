@@ -8,11 +8,15 @@ use RuntimeException;
  * Thin wrapper around PHP's ldap_* functions.
  * Handles several user types (student, staff, faculty, guest...) that all live
  * under the same people container and are told apart by eduPersonAffiliation.
+ * Campuses are read from the directory (OUs under ldap.campuses_dn).
  */
 class LdapService
 {
     /** @var \LDAP\Connection|null */
     protected $conn = null;
+
+    /** @var array<string,array{label:string,dn:string}>|null per-instance cache */
+    protected ?array $campusCache = null;
 
     public function __destruct()
     {
@@ -24,6 +28,8 @@ class LdapService
         if (! extension_loaded('ldap')) {
             throw new RuntimeException('The PHP LDAP extension is not enabled (enable "extension=ldap" in php.ini).');
         }
+
+        $this->disconnect(); // never leak an earlier connection
 
         $conn = @ldap_connect(config('ldap.uri'));
         if ($conn === false) {
@@ -63,6 +69,74 @@ class LdapService
     protected function dnFor(string $uid): string
     {
         return 'uid=' . ldap_escape($uid, '', LDAP_ESCAPE_DN) . ',' . config('ldap.people_dn');
+    }
+
+    /* ------------------------------------------------------------------
+     |  Base DN and campuses (read from the directory)
+     * -----------------------------------------------------------------*/
+
+    /** Base DN: ldap.base_dn if set, otherwise people_dn without its first RDN. */
+    public function baseDn(): string
+    {
+        $base = (string) config('ldap.base_dn');
+        if ($base !== '') {
+            return $base;
+        }
+        return (string) preg_replace('/^[^,]+,\s*/', '', (string) config('ldap.people_dn'));
+    }
+
+    /** Container that holds one OU per campus. */
+    public function campusesDn(): string
+    {
+        return (string) (config('ldap.campuses_dn') ?: 'ou=campuses,' . $this->baseDn());
+    }
+
+    /**
+     * Campuses = the organizationalUnit entries directly under campusesDn().
+     * Same shape the old config had, so views keep working:
+     * key (lower-case ou name) => ['label' => 'Ekwendeni', 'dn' => 'ou=ekwendeni,ou=campuses,...']
+     *
+     * @return array<string,array{label:string,dn:string}> sorted by label
+     */
+    public function campuses(): array
+    {
+        if ($this->campusCache !== null) {
+            return $this->campusCache;
+        }
+
+        $this->ensureConnected();
+
+        $res = @ldap_list($this->conn, $this->campusesDn(), '(objectClass=organizationalUnit)', ['ou']);
+        if ($res === false) {
+            if (ldap_errno($this->conn) === 32) {
+                throw new RuntimeException(
+                    'Campuses container not found: ' . $this->campusesDn() .
+                    '. Create it, or set ldap.campuses_dn.'
+                );
+            }
+            throw new RuntimeException('Could not read campuses: ' . ldap_error($this->conn));
+        }
+
+        $entries  = ldap_get_entries($this->conn, $res);
+        $campuses = [];
+        for ($i = 0; $i < $entries['count']; $i++) {
+            $ou = $entries[$i]['ou'][0] ?? '';
+            if ($ou === '') {
+                continue;
+            }
+            $campuses[strtolower($ou)] = [
+                'label' => ucwords(str_replace(['-', '_'], ' ', $ou)) . (string) config('ldap.campus_label_suffix', ''),
+                'dn'    => $entries[$i]['dn'],
+            ];
+        }
+        uasort($campuses, fn ($a, $b) => strcasecmp($a['label'], $b['label']));
+
+        return $this->campusCache = $campuses;
+    }
+
+    public function forgetCampuses(): void
+    {
+        $this->campusCache = null;
     }
 
     /* ------------------------------------------------------------------
@@ -238,24 +312,37 @@ class LdapService
      * -----------------------------------------------------------------*/
 
     /**
-     * Change name, e-mail and campus. The username (uid) and type cannot be changed here.
+     * Change name, e-mail and campus, and optionally the user type.
+     * The username (uid) cannot be changed.
      *
      * @param array{givenName:string,sn:string,mail:string} $c
+     * @param string|null $type new type key (ldap.user_types) or null to keep the current one.
+     *                          Changing it replaces eduPersonAffiliation with the new type's values.
      */
-    public function updateStudent(string $uid, array $c, string $campusDn): void
+    public function updateStudent(string $uid, array $c, string $campusDn, ?string $type = null): void
     {
         $this->ensureConnected();
 
         $cn = trim($c['givenName'] . ' ' . $c['sn']);
 
-        $ok = @ldap_modify($this->conn, $this->dnFor($uid), [
+        $attrs = [
             'givenName'          => $c['givenName'],
             'sn'                 => $c['sn'],
             'cn'                 => $cn,
             'displayName'        => $cn,
             'mail'               => $c['mail'],
             'eduPersonOrgUnitDN' => $campusDn,
-        ]);
+        ];
+
+        if ($type !== null) {
+            $t = $this->typeConfig($type);
+            $attrs['eduPersonAffiliation'] = array_values($t['affiliations']);
+            if ($t['entitlements']) {
+                $attrs['eduPersonEntitlement'] = array_values($t['entitlements']);
+            }
+        }
+
+        $ok = @ldap_modify($this->conn, $this->dnFor($uid), $attrs);
 
         if (! $ok) {
             throw new RuntimeException('LDAP update failed: ' . ldap_error($this->conn));

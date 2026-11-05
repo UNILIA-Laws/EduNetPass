@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\PasswordResetMail;
+use App\Models\ActivityLog;
 use App\Services\LdapService;
 use App\Services\ProvisioningService;
 use Illuminate\Http\Request;
@@ -99,6 +100,20 @@ class UserController extends Controller
         // Only touch the affiliation when the type was actually changed
         $newType = (($data['type'] ?? '') !== '' && $data['type'] !== $user['type']) ? $data['type'] : null;
 
+        // Work out which fields changed (names only, never values) before saving
+        $changed = [];
+        foreach (['givenName', 'sn', 'mail'] as $field) {
+            if (trim($data[$field]) !== (string) ($user[$field] ?? '')) {
+                $changed[] = $field;
+            }
+        }
+        if ($data['campus'] !== $this->campusKeyFor($user['campusDn'], $campuses)) {
+            $changed[] = 'campus';
+        }
+        if ($newType !== null) {
+            $changed[] = 'type';
+        }
+
         try {
             $this->ldap->updateStudent($uid, [
                 'givenName' => trim($data['givenName']),
@@ -106,12 +121,22 @@ class UserController extends Controller
                 'mail'      => trim($data['mail']),
             ], $campuses[$data['campus']]['dn'], $newType);
         } catch (Throwable $e) {
+            Log::error('MyLDAP.user update failed', [
+                'uid' => $uid, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('user.update_failed', $uid, ['by' => $request->user()?->email]);
+
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
         Log::info('MyLDAP.user updated', [
             'uid' => $uid, 'type_from' => $user['type'], 'type_to' => $newType, 'by' => $request->user()?->email,
         ]);
+        ActivityLog::record('user.updated', $uid, array_filter([
+            'changed'   => $changed ?: null,
+            'type_from' => $newType ? $user['type'] : null,
+            'type_to'   => $newType,
+        ]));
 
         return redirect()->route('users.edit', $uid)->with('status', 'Details saved.');
     }
@@ -125,12 +150,18 @@ class UserController extends Controller
             'send_email'   => 'nullable|boolean',
         ]);
 
-        $password = ($data['userPassword'] ?? '') !== '' ? $data['userPassword'] : ProvisioningService::generatePassword();
+        $custom   = ($data['userPassword'] ?? '') !== '';
+        $password = $custom ? $data['userPassword'] : ProvisioningService::generatePassword();
         $sendMail = $request->boolean('send_email');
 
         try {
             $this->ldap->setPassword($uid, $password);
         } catch (Throwable $e) {
+            Log::error('MyLDAP.user password reset failed', [
+                'uid' => $uid, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('user.password_reset_failed', $uid);
+
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
@@ -152,14 +183,21 @@ class UserController extends Controller
                 $reset['password'] = null; // delivered by e-mail, no need to show it
             } catch (Throwable $e) {
                 $reset['error'] = 'Password was changed, but the e-mail could not be sent: ' . $e->getMessage();
+                Log::warning('MyLDAP.user password reset e-mail failed', ['uid' => $uid, 'error' => $e->getMessage()]);
             }
         } elseif ($sendMail) {
             $reset['error'] = 'This user has no e-mail address on file.';
         }
 
+        // The password itself is never written to the log
         Log::info('MyLDAP.user password reset', [
             'uid' => $uid, 'type' => $user['type'], 'emailed' => $reset['emailed'], 'by' => $request->user()?->email,
         ]);
+        ActivityLog::record('user.password_reset', $uid, array_filter([
+            'generated'    => $custom ? null : 'yes',
+            'emailed'      => $reset['emailed'] ? 'yes' : null,
+            'email_failed' => ($sendMail && ! $reset['emailed']) ? 'yes' : null,
+        ]));
 
         return back()->with('reset', $reset);
     }
@@ -171,10 +209,16 @@ class UserController extends Controller
         try {
             $this->ldap->deleteStudent($uid);
         } catch (Throwable $e) {
+            Log::error('MyLDAP.user delete failed', [
+                'uid' => $uid, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('user.delete_failed', $uid);
+
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
         Log::info('MyLDAP.user deleted', ['uid' => $uid, 'type' => $user['type'], 'by' => $request->user()?->email]);
+        ActivityLog::record('user.deleted', $uid, array_filter(['type' => $user['type']]));
 
         return back()->with('status', "User {$uid} deleted.");
     }

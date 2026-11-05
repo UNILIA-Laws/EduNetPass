@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Services\LdapDirectoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -41,15 +42,23 @@ class GroupController extends Controller
             'cn.regex' => 'Use letters, numbers, spaces, dots, dashes or underscores only.',
         ]);
 
+        $cn = trim($data['cn']);
+
         try {
-            $this->ldap->createGroup(trim($data['cn']), trim((string) ($data['description'] ?? '')));
+            $this->ldap->createGroup($cn, trim((string) ($data['description'] ?? '')));
         } catch (Throwable $e) {
+            Log::error('MyLDAP.group create failed', [
+                'cn' => $cn, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('group.create_failed', $cn, ['by' => $request->user()?->email]);
+
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('MyLDAP.group created', ['cn' => $data['cn'], 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.group created', ['cn' => $cn, 'by' => $request->user()?->email]);
+        ActivityLog::record('group.created', $cn);
 
-        return redirect()->route('groups.show', $data['cn'])->with('status', 'Group created.');
+        return redirect()->route('groups.show', $cn)->with('status', 'Group created.');
     }
 
     public function show(string $cn)
@@ -88,10 +97,16 @@ class GroupController extends Controller
             }
             $this->ldap->addMember($cn, $uid);
         } catch (Throwable $e) {
+            Log::error('MyLDAP.group member add failed', [
+                'cn' => $cn, 'uid' => $uid, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('group.member_add_failed', $cn, ['uid' => $uid]);
+
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
         Log::info('MyLDAP.group member added', ['cn' => $cn, 'uid' => $uid, 'by' => $request->user()?->email]);
+        ActivityLog::record('group.member_added', $cn, ['uid' => $uid]);
 
         return back()->with('status', "{$uid} added.");
     }
@@ -103,25 +118,37 @@ class GroupController extends Controller
         try {
             $this->ldap->removeMember($cn, $uid);
         } catch (Throwable $e) {
+            Log::error('MyLDAP.group member remove failed', [
+                'cn' => $cn, 'uid' => $uid, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('group.member_remove_failed', $cn, ['uid' => $uid]);
+
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
         Log::info('MyLDAP.group member removed', ['cn' => $cn, 'uid' => $uid, 'by' => $request->user()?->email]);
+        ActivityLog::record('group.member_removed', $cn, ['uid' => $uid]);
 
         return back()->with('status', "{$uid} removed.");
     }
 
     public function destroy(Request $request, string $cn)
     {
-        $this->findOrFail($cn);
+        $group = $this->findOrFail($cn);
 
         try {
             $this->ldap->deleteGroup($cn);
         } catch (Throwable $e) {
+            Log::error('MyLDAP.group delete failed', [
+                'cn' => $cn, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('group.delete_failed', $cn);
+
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
         Log::info('MyLDAP.group deleted', ['cn' => $cn, 'by' => $request->user()?->email]);
+        ActivityLog::record('group.deleted', $cn, ['members' => count($group['members'] ?? [])]);
 
         return redirect()->route('groups.index')->with('status', "Group {$cn} deleted.");
     }

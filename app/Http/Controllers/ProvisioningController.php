@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\SendLogMail;
+use App\Models\ActivityLog;
 use App\Services\LdapService;
 use App\Services\ProvisioningService;
 use App\Services\StudentFileReader;
@@ -55,6 +56,8 @@ class ProvisioningController extends Controller
         try {
             $campusKeys = array_keys($ldap->campuses());
         } catch (Throwable $e) {
+            Log::error('MyLDAP.provision campuses failed', ['error' => $e->getMessage(), 'by' => $request->user()?->email]);
+
             return back()->with('tab', 'single')->withInput($request->except('userPassword'))
                 ->withErrors(['ldap' => $e->getMessage()]);
         }
@@ -72,20 +75,46 @@ class ProvisioningController extends Controller
             'uid.regex' => 'Username may only contain letters, numbers, dot, dash and underscore.',
         ]);
 
+        $uid = trim($data['uid']);
+
         try {
             $results = $service->provision([[
                 'givenName'    => trim($data['givenName']),
                 'sn'           => trim($data['sn']),
-                'uid'          => trim($data['uid']),
+                'uid'          => $uid,
                 'mail'         => trim($data['mail']),
                 'Reg'          => trim($data['Reg'] ?? ''),
                 'userPassword' => $data['userPassword'] ?? '',
             ]], $data['campus'], $data['type']);
         } catch (Throwable $e) {
+            Log::error('MyLDAP.user provision failed', [
+                'uid' => $uid, 'type' => $data['type'], 'campus' => $data['campus'],
+                'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('user.provision_failed', $uid, [
+                'type' => $data['type'], 'campus' => $data['campus'],
+            ]);
+
             return back()->with('tab', 'single')
                 ->withInput($request->except('userPassword'))
                 ->withErrors(['ldap' => $e->getMessage()]);
         }
+
+        // Passwords are never logged, whether typed or generated
+        $r = $results[0] ?? [];
+
+        Log::info('MyLDAP.user provisioned', [
+            'uid' => $uid, 'type' => $data['type'], 'campus' => $data['campus'],
+            'ldap' => $r['ldap'] ?? null, 'email' => $r['email'] ?? null, 'error' => $r['error'] ?? null,
+            'by' => $request->user()?->email,
+        ]);
+        ActivityLog::record('user.provisioned', $uid, array_filter([
+            'type'   => $data['type'],
+            'campus' => $data['campus'],
+            'ldap'   => $r['ldap'] ?? null,
+            'email'  => $r['email'] ?? null,
+            'error'  => ! empty($r['error']) ? 'yes' : null,
+        ]));
 
         return back()->with('tab', 'single')->with('results', $results);
     }
@@ -96,6 +125,8 @@ class ProvisioningController extends Controller
         try {
             $campusKeys = array_keys($ldap->campuses());
         } catch (Throwable $e) {
+            Log::error('MyLDAP.bulk campuses failed', ['error' => $e->getMessage(), 'by' => $request->user()?->email]);
+
             return back()->with('tab', 'bulk')->withErrors(['ldap' => $e->getMessage()]);
         }
 
@@ -105,17 +136,50 @@ class ProvisioningController extends Controller
             'type'     => ['required', Rule::in(array_keys(config('ldap.user_types')))],
         ]);
 
+        $fileName = $request->file('csv_file')->getClientOriginalName();
+        $campus   = $request->input('campus');
+        $type     = $request->input('type');
+
         try {
             $rows    = $reader->read($request->file('csv_file'));
-            $results = $service->provision($rows, $request->input('campus'), $request->input('type'));
+            $results = $service->provision($rows, $campus, $type);
         } catch (InvalidArgumentException $e) {
+            Log::warning('MyLDAP.bulk file rejected', [
+                'file' => $fileName, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('user.bulk_rejected', $fileName, ['campus' => $campus, 'type' => $type]);
+
             return back()->with('tab', 'bulk')->withErrors(['csv_file' => $e->getMessage()]);
         } catch (Throwable $e) {
-            Log::error('MyLDAP.bulk failed', ['error' => $e->getMessage()]);
+            Log::error('MyLDAP.bulk failed', [
+                'file' => $fileName, 'error' => $e->getMessage(), 'by' => $request->user()?->email,
+            ]);
+            ActivityLog::record('user.bulk_failed', $fileName, ['campus' => $campus, 'type' => $type]);
+
             return back()->with('tab', 'bulk')->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        $this->sendLogToIct($results, $request->user()?->email);
+        $logFile = $this->sendLogToIct($results, $request->user()?->email);
+
+        // Counts per LDAP status, e.g. ['created' => 40, 'failed' => 2] (whatever statuses your service returns)
+        $ldapCounts  = collect($results)->countBy(fn ($r) => (string) ($r['ldap'] ?? 'unknown'))->all();
+        $emailCounts = collect($results)->countBy(fn ($r) => (string) ($r['email'] ?? 'unknown'))->all();
+        $withErrors  = collect($results)->filter(fn ($r) => ! empty($r['error']))->count();
+
+        Log::info('MyLDAP.bulk provisioned', [
+            'file' => $fileName, 'rows' => count($results), 'campus' => $campus, 'type' => $type,
+            'ldap' => $ldapCounts, 'email' => $emailCounts, 'log_file' => $logFile,
+            'by' => $request->user()?->email,
+        ]);
+        ActivityLog::record('user.bulk_provisioned', $fileName, array_filter([
+            'rows'     => count($results),
+            'campus'   => $campus,
+            'type'     => $type,
+            'ldap'     => $ldapCounts,
+            'email'    => $emailCounts,
+            'errors'   => $withErrors ?: null,
+            'log_file' => $logFile,
+        ]));
 
         return back()->with('tab', 'bulk')->with('results', $results);
     }
@@ -139,8 +203,8 @@ class ProvisioningController extends Controller
         }, 'sample_users.csv', ['Content-Type' => 'text/csv']);
     }
 
-    /** Log file with LDAP status. Passwords are never written to it. */
-    private function sendLogToIct(array $results, ?string $by): void
+    /** Log file with LDAP status. Passwords are never written to it. Returns the file name. */
+    private function sendLogToIct(array $results, ?string $by): string
     {
         $lines = ["=== MyLDAP Bulk Provisioning Log ===", 'Date: ' . now(), 'Run by: ' . ($by ?? 'n/a'), ''];
         foreach ($results as $r) {
@@ -158,5 +222,7 @@ class ProvisioningController extends Controller
         } catch (Throwable $e) {
             Log::warning('Could not e-mail provisioning log: ' . $e->getMessage());
         }
+
+        return $file;
     }
 }

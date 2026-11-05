@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Bulk upload')
+@section('title', 'MyLDAP | Bulk upload')
 
 @section('content')
 @include('partials.usr-style')
@@ -38,7 +38,7 @@
     <div class="usr-head">
         <div>
             <h1 class="usr-title">Bulk upload</h1>
-            <p class="usr-sub">Create or update many eduroam accounts from a CSV or Excel file and e-mail each user their login.</p>
+            <p class="usr-sub">Create or update many MyLDAP accounts from a CSV or Excel file and e-mail each user their login.</p>
         </div>
         <a href="{{ route('enroll') }}" class="btn-clear">Add a single user instead</a>
     </div>

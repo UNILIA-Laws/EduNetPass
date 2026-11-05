@@ -32,7 +32,7 @@ class DashboardController extends Controller
                 Cache::put(self::CACHE_KEY, $stats, self::CACHE_TTL);
             } catch (Throwable $e) {
                 $error = $e->getMessage();
-                Log::error('eduroam.dashboard stats failed', ['error' => $error]);
+                Log::error('MyLDAP.dashboard stats failed', ['error' => $error]);
             }
         }
 

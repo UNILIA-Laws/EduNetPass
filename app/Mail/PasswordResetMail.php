@@ -19,7 +19,7 @@ class PasswordResetMail extends Mailable
 
     public function build()
     {
-        return $this->subject('Your Eduroam Password Has Been Reset')
+        return $this->subject('Your MyLDAP Password Has Been Reset')
             ->view('emails.password_reset');
     }
 }

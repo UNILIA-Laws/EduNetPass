@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Edit ' . $user['uid'])
+@section('title', 'MyLDAP | Edit ' . $user['uid'])
 
 @section('content')
 @include('partials.usr-style')
@@ -96,7 +96,7 @@
 
                         <div class="note warn d-none mt-3 mb-0" id="typeNote">
                             <i class="fa-solid fa-triangle-exclamation mt-1"></i>
-                            <span>Changing the type replaces this user's eduroam affiliation. They keep the same username and password.</span>
+                            <span>Changing the type replaces this user's MyLDAP affiliation. They keep the same username and password.</span>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 mt-4">

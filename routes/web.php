@@ -8,6 +8,7 @@ use App\Http\Controllers\StaffController;
 use App\Http\Controllers\CampusController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\OuController;
+use App\Http\Controllers\LdapSettingsController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -64,6 +65,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/staff/{user}/edit', [StaffController::class, 'edit'])->name('staff.edit');
     Route::put('/staff/{user}', [StaffController::class, 'update'])->name('staff.update');
     Route::delete('/staff/{user}', [StaffController::class, 'destroy'])->name('staff.destroy');
+
+    // LDAP server settings: read-only view + connection test.
+    // Restricted to administrators (see the 'manage-ldap-settings' gate) and
+    // the test is rate limited (5 per minute).
+    Route::middleware('can:manage-ldap-settings')->group(function () {
+        Route::get('/settings/ldap', [LdapSettingsController::class, 'show'])->name('settings.ldap');
+        Route::post('/settings/ldap/test', [LdapSettingsController::class, 'test'])
+            ->middleware('throttle:5,1')
+            ->name('settings.ldap.test');
+    });
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

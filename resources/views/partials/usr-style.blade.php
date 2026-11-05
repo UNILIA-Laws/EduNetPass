@@ -1,5 +1,5 @@
 {{--
-    Shared design for the eduroam admin pages.
+    Shared design for the MyLDAP admin pages.
     Place at: resources/views/partials/usr-style.blade.php
     Use with: @include('partials.usr-style')  (inside @section('content'), before the markup)
     Wrap page markup in: <div class="usr"><div class="container"> ... </div></div>

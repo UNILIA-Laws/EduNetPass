@@ -20,7 +20,7 @@
         ['heading' => 'Administration'],
         ['route' => 'staff.index', 'active' => request()->routeIs('staff.*'),                                          'icon' => 'fa-user-gear',        'label' => 'System users'],
         ['href' => '#',            'active' => false,                                                                  'icon' => 'fa-clipboard-list',   'label' => 'Audit logs'],
-        ['href' => '#',            'active' => false,                                                                  'icon' => 'fa-server',           'label' => 'LDAP server settings'],
+        ['href' => route('settings.ldap'), 'active' => request()->routeIs('settings.ldap*'), 'icon' => 'fa-server', 'label' => 'LDAP server settings'],
     ];
 @endphp
 

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Users')
+@section('title', 'MyLDAP | Users')
 
 @section('content')
 @include('partials.usr-style')
@@ -16,7 +16,7 @@
     <div class="usr-head">
         <div>
             <h1 class="usr-title">Users</h1>
-            <p class="usr-sub">Search, edit and reset passwords for eduroam accounts in LDAP.</p>
+            <p class="usr-sub">Search, edit and reset passwords for MyLDAP accounts in LDAP.</p>
         </div>
         <span class="count">{{ number_format($users->total()) }} found</span>
     </div>
@@ -142,7 +142,7 @@
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete <strong id="deleteName"></strong> (<code id="deleteUid"></code>)?</p>
-                <p class="mb-0">The account will be removed from LDAP and the user will lose eduroam access immediately. This cannot be undone.</p>
+                <p class="mb-0">The account will be removed from LDAP and the user will lose MyLDAP access immediately. This cannot be undone.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-cancel" data-bs-dismiss="modal">Cancel</button>

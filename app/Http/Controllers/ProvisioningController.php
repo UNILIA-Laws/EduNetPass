@@ -38,7 +38,7 @@ class ProvisioningController extends Controller
             $campuses = $ldap->campuses();
         } catch (Throwable $e) {
             $error = $e->getMessage();
-            Log::error('eduroam.campuses failed', ['error' => $error]);
+            Log::error('MyLDAP.campuses failed', ['error' => $error]);
         }
 
         $page = view($view, [
@@ -111,7 +111,7 @@ class ProvisioningController extends Controller
         } catch (InvalidArgumentException $e) {
             return back()->with('tab', 'bulk')->withErrors(['csv_file' => $e->getMessage()]);
         } catch (Throwable $e) {
-            Log::error('eduroam.bulk failed', ['error' => $e->getMessage()]);
+            Log::error('MyLDAP.bulk failed', ['error' => $e->getMessage()]);
             return back()->with('tab', 'bulk')->withErrors(['ldap' => $e->getMessage()]);
         }
 
@@ -142,7 +142,7 @@ class ProvisioningController extends Controller
     /** Log file with LDAP status. Passwords are never written to it. */
     private function sendLogToIct(array $results, ?string $by): void
     {
-        $lines = ["=== Eduroam Bulk Provisioning Log ===", 'Date: ' . now(), 'Run by: ' . ($by ?? 'n/a'), ''];
+        $lines = ["=== MyLDAP Bulk Provisioning Log ===", 'Date: ' . now(), 'Run by: ' . ($by ?? 'n/a'), ''];
         foreach ($results as $r) {
             $lines[] = sprintf(
                 '%-22s %-8s %-32s LDAP: %-8s E-mail: %-8s %s',

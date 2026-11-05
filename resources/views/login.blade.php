@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Login')
+@section('title', 'MyLDAP | Login')
 
 @section('content')
 <style>
@@ -55,11 +55,11 @@
     .auth .form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
     .auth .form-check-label { font-size: .84rem; color: var(--muted); }
 
-    .auth .btn-eduroam {
+    .auth .btn-MyLDAP {
         background: var(--accent); color: #fff; border: 0; border-radius: 10px;
         font-size: .92rem; font-weight: 600; padding: .65rem 1rem; box-shadow: none; transition: background .15s;
     }
-    .auth .btn-eduroam:hover { background: var(--accent-ink); color: #fff; }
+    .auth .btn-MyLDAP:hover { background: var(--accent-ink); color: #fff; }
 
     .auth-error {
         display: flex; gap: .55rem; align-items: flex-start; background: var(--bad-soft); color: #8E2323;
@@ -73,7 +73,7 @@
         <div class="auth-head">
             <div class="auth-mark"><i class="fa-solid fa-wifi"></i></div>
             <h1>Sign in</h1>
-            <p class="auth-lead">ICT staff only. Use your staff e-mail to manage eduroam accounts.</p>
+            <p class="auth-lead">ICT staff only. Use your staff e-mail to manage MyLDAP accounts.</p>
         </div>
 
         <div class="auth-card">
@@ -106,7 +106,7 @@
                     <label class="form-check-label" for="remember">Keep me signed in on this device</label>
                 </div>
 
-                <div class="d-grid"><button type="submit" class="btn btn-eduroam">Sign in</button></div>
+                <div class="d-grid"><button type="submit" class="btn btn-MyLDAP">Sign in</button></div>
             </form>
         </div>
 

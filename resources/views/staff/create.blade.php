@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Add staff')
+@section('title', 'MyLDAP | Add staff')
 
 @section('content')
 <div class="container-xl py-4 py-lg-5" style="max-width:820px">
@@ -18,7 +18,7 @@
                 @include('staff._form')
                 <div class="d-flex justify-content-end gap-2 mt-4">
                     <a href="{{ route('staff.index') }}" class="btn btn-light">Cancel</a>
-                    <button class="btn btn-eduroam px-4"><i class="fa-solid fa-check me-2"></i>Create account</button>
+                    <button class="btn btn-MyLDAP px-4"><i class="fa-solid fa-check me-2"></i>Create account</button>
                 </div>
             </form>
         </div>

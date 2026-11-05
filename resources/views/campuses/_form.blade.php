@@ -6,7 +6,7 @@
     $action  = $editing ? route('campuses.update', $campus) : route('campuses.store');
 @endphp
 
-@section('title', 'eduroam | ' . $title)
+@section('title', 'MyLDAP | ' . $title)
 
 @section('content')
 <style>

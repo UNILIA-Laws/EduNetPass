@@ -30,7 +30,7 @@ class CampusController extends Controller
             }
         } catch (Throwable $e) {
             $error = $e->getMessage();
-            Log::error('eduroam.campuses list failed', ['error' => $error]);
+            Log::error('MyLDAP.campuses list failed', ['error' => $error]);
         }
 
         return view('campuses.index', [
@@ -62,7 +62,7 @@ class CampusController extends Controller
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.campus created', ['campus' => $name, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.campus created', ['campus' => $name, 'by' => $request->user()?->email]);
 
         return redirect()->route('campuses.index')->with('status', "Campus '{$name}' created.");
     }
@@ -97,7 +97,7 @@ class CampusController extends Controller
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.campus updated', ['campus' => $campus, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.campus updated', ['campus' => $campus, 'by' => $request->user()?->email]);
 
         return redirect()->route('campuses.index')->with('status', "Campus '{$campus}' updated.");
     }
@@ -112,7 +112,7 @@ class CampusController extends Controller
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.campus deleted', ['campus' => $campus, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.campus deleted', ['campus' => $campus, 'by' => $request->user()?->email]);
 
         return redirect()->route('campuses.index')->with('status', "Campus '{$campus}' deleted.");
     }

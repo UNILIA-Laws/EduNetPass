@@ -1,6 +1,6 @@
 # EduNetPass
 
-A web portal for IT staff to create network (eduroam / Wi-Fi) accounts in an LDAP directory and email the login details to students, one at a time or in bulk. Staff can also browse the users already in the directory, edit their details and reset their passwords. It was built for the Laws Campus of UNILIA (Malawi), but any school, campus or organisation with an LDAP directory can use it.
+A web portal for IT staff to create network (MyLDAP / Wi-Fi) accounts in an LDAP directory and email the login details to students, one at a time or in bulk. Staff can also browse the users already in the directory, edit their details and reset their passwords. It was built for the Laws Campus of UNILIA (Malawi), but any school, campus or organisation with an LDAP directory can use it.
 
 ## What it does
 
@@ -45,7 +45,7 @@ Edit `.env` (see the table below), then:
 
 ```bash
 php artisan migrate
-php artisan eduroam:make-admin staff@yourschool.edu   # creates a staff login
+php artisan MyLDAP:make-admin staff@yourschool.edu   # creates a staff login
 php artisan serve                                      # for testing
 ```
 
@@ -118,7 +118,7 @@ Loading thousands of users from a remote LDAP server takes several round trips, 
 ```php
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('eduroam:cache-users')->everyTenMinutes();
+Schedule::command('MyLDAP:cache-users')->everyTenMinutes();
 ```
 
 and add this line to the server's crontab (`crontab -e`):
@@ -127,7 +127,7 @@ and add this line to the server's crontab (`crontab -e`):
 * * * * * cd /path/to/edunetpass && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-You can also run `php artisan eduroam:cache-users` by hand at any time.
+You can also run `php artisan MyLDAP:cache-users` by hand at any time.
 
 ## Customising for your institution
 
@@ -147,7 +147,7 @@ You can also run `php artisan eduroam:cache-users` by hand at any time.
 | What | File |
 |---|---|
 | Logo and favicon | `public/unilia.jpg` (replace the image, or change the path in `resources/views/layouts/app.blade.php`) |
-| Site name in the header ("Laws Eduroam") | `resources/views/layouts/app.blade.php` |
+| Site name in the header ("Laws MyLDAP") | `resources/views/layouts/app.blade.php` |
 | Credentials email: text, support contacts, user-guide link, sign-off | `resources/views/emails/student_credentials.blade.php` |
 | Password-reset email text and sign-off | `resources/views/emails/password_reset.blade.php` |
 | Log email text | `resources/views/emails/log_email.blade.php` |
@@ -179,7 +179,7 @@ You can also run `php artisan eduroam:cache-users` by hand at any time.
 | Accounts created but no emails | Check the `MAIL_*` settings; failed emails show in the results table |
 | "Excel support is not installed" | Run `composer require phpoffice/phpspreadsheet` |
 | Users page shows "Could not read from LDAP" | Same causes as the connect/bind error; the bind account also needs read access |
-| Users page is slow only after a while | The cache expired. Set up the scheduled `eduroam:cache-users` command, or raise `USERS_CACHE_MINUTES` |
+| Users page is slow only after a while | The cache expired. Set up the scheduled `MyLDAP:cache-users` command, or raise `USERS_CACHE_MINUTES` |
 | A user you just added elsewhere is missing | The list is cached. Press **Refresh from LDAP** |
 | A "packet too large" error when loading Users | The cached list (about 1.3 MB per 5,000 users) exceeds an old database's packet limit. Set `CACHE_STORE=file` in `.env` |
 | Users list stops at a round number | You reached `max_list` in `config/ldap.php`. Raise it, or use the search box |

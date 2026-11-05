@@ -100,7 +100,7 @@ class ProvisioningService
         } catch (Throwable $e) {
             $r['ldap']  = 'failed';
             $r['error'] = $e->getMessage();
-            Log::warning('eduroam.provision ldap failed', ['uid' => $row['uid'], 'type' => $row['type'], 'error' => $e->getMessage()]);
+            Log::warning('MyLDAP.provision ldap failed', ['uid' => $row['uid'], 'type' => $row['type'], 'error' => $e->getMessage()]);
             return $r;
         }
 
@@ -123,7 +123,7 @@ class ProvisioningService
             $r['password'] = $password;
         }
 
-        Log::info('eduroam.provision', ['uid' => $row['uid'], 'type' => $row['type'], 'ldap' => $r['ldap'], 'email' => $r['email']]);
+        Log::info('MyLDAP.provision', ['uid' => $row['uid'], 'type' => $row['type'], 'ldap' => $r['ldap'], 'email' => $r['email']]);
 
         return $r;
     }

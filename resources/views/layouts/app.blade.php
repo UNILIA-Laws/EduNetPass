@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'eduroam | Provisioning')</title>
+    <title>@yield('title', 'MyLDAP | Provisioning')</title>
     <link rel="icon" type="image/jpeg" href="{{ asset('unilia.jpg') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         :root {
-            --eduroam-blue: #003366;
-            --eduroam-accent: #f39200;
+            --MyLDAP-blue: #003366;
+            --MyLDAP-accent: #f39200;
             --sidebar-w: 260px;
         }
         body { background-color: #f4f7f9; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; min-height: 100vh; }
@@ -33,7 +33,7 @@
         .sidebar .brand { display: flex; align-items: center; gap: .7rem; text-decoration: none; padding: .25rem .5rem 1.1rem; }
         .sidebar .brand img { height: 40px; width: auto; max-width: 100px; border-radius: 8px; }
         .brand-name {
-            font-size: 1.2rem; font-weight: 800; letter-spacing: -.03em; color: var(--eduroam-blue);
+            font-size: 1.2rem; font-weight: 800; letter-spacing: -.03em; color: var(--MyLDAP-blue);
         }
 
         .sidebar .menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .2rem; }
@@ -106,15 +106,15 @@
 
         /* ---------- Shared components ---------- */
         .card { border: none; border-radius: 16px; overflow: hidden; }
-        .card-header { background-color: var(--eduroam-blue) !important; color: white; padding: 1.2rem; border: none; }
-        .btn-eduroam { background-color: var(--eduroam-blue); color: white; border-radius: 8px; padding: 12px; transition: 0.3s; border: none; font-weight: 600; }
-        .btn-eduroam:hover { background-color: #002244; color: white; box-shadow: 0 4px 12px rgba(0,51,102,0.2); }
+        .card-header { background-color: var(--MyLDAP-blue) !important; color: white; padding: 1.2rem; border: none; }
+        .btn-MyLDAP { background-color: var(--MyLDAP-blue); color: white; border-radius: 8px; padding: 12px; transition: 0.3s; border: none; font-weight: 600; }
+        .btn-MyLDAP:hover { background-color: #002244; color: white; box-shadow: 0 4px 12px rgba(0,51,102,0.2); }
         .csv-helper-card { background: white; border-radius: 16px; padding: 20px; border: 1px solid #e9ecef; }
-        .code-block { background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #dee2e6; font-family: 'Courier New', monospace; color: var(--eduroam-blue); font-weight: bold; display: block; margin-top: 10px; font-size: .85rem; }
+        .code-block { background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px solid #dee2e6; font-family: 'Courier New', monospace; color: var(--MyLDAP-blue); font-weight: bold; display: block; margin-top: 10px; font-size: .85rem; }
         .upload-zone { border: 2px dashed #dee2e6; border-radius: 12px; padding: 40px 20px; transition: 0.3s; background: #fafafa; cursor: pointer; }
-        .upload-zone:hover, .upload-zone.drag { border-color: var(--eduroam-blue); background: #f0f5ff; }
-        .nav-pills .nav-link { color: var(--eduroam-blue); font-weight: 600; }
-        .nav-pills .nav-link.active { background-color: var(--eduroam-blue); }
+        .upload-zone:hover, .upload-zone.drag { border-color: var(--MyLDAP-blue); background: #f0f5ff; }
+        .nav-pills .nav-link { color: var(--MyLDAP-blue); font-weight: 600; }
+        .nav-pills .nav-link.active { background-color: var(--MyLDAP-blue); }
         .spinner-border-sm { width: 1rem; height: 1rem; border-width: 0.2em; }
         a.card { transition: transform .15s, box-shadow .15s; }
         a.card:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.1) !important; }
@@ -131,7 +131,7 @@
         @yield('content')
     </div>
 
-    <p class="text-center text-muted my-4" style="font-size: 0.75rem;">UNILIA Eduroam Portal &copy; {{ date('Y') }}. All rights reserved.</p>
+    <p class="text-center text-muted my-4" style="font-size: 0.75rem;">UNILIA MyLDAP Portal &copy; {{ date('Y') }}. All rights reserved.</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

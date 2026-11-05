@@ -1,6 +1,6 @@
 <p>Dear {{ $student['givenName'] }} {{ $student['sn'] }},</p>
 
-<p>The password for your <strong>eduroam</strong> account has been reset by the ICT Office. Please use the new details below to connect to the school Wi-Fi.</p>
+<p>The password for your <strong>MyLDAP</strong> account has been reset by the ICT Office. Please use the new details below to connect to the school Wi-Fi.</p>
 
 <ul>
     <li><strong>Username (UID):</strong> {{ $student['uid'] }}</li>

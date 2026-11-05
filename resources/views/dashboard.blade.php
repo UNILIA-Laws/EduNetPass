@@ -1,9 +1,9 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Dashboard')
+@section('title', 'MyLDAP | Dashboard')
 
 @push('styles')
 <style>
-    .dash { --blue: var(--eduroam-blue); --ink: #172033; --muted: #667085; --line: #E3E8F0; }
+    .dash { --blue: var(--MyLDAP-blue); --ink: #172033; --muted: #667085; --line: #E3E8F0; }
 
     .dash-hero {
         border-radius: 16px; color: #fff; padding: 1.75rem 2rem;

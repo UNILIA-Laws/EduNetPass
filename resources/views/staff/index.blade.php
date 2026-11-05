@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Staff')
+@section('title', 'MyLDAP | Staff')
 
 @section('content')
 @include('partials.usr-style')

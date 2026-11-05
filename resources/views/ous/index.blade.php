@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Organizational units')
+@section('title', 'MyLDAP | Organizational units')
 
 @section('content')
 @include('partials.usr-style')
@@ -23,7 +23,7 @@
     <div class="usr-head">
         <div>
             <h1 class="usr-title">Organizational units</h1>
-            <p class="usr-sub">Browse, create and remove the OUs that organize eduroam accounts in LDAP.</p>
+            <p class="usr-sub">Browse, create and remove the OUs that organize MyLDAP accounts in LDAP.</p>
         </div>
         <span class="count">{{ number_format(count($ous)) }} {{ \Illuminate\Support\Str::plural('unit', count($ous)) }}</span>
     </div>

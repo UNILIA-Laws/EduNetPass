@@ -44,7 +44,7 @@ class UserController extends Controller
             $users = $this->ldap->searchStudents($q, $campusDn, $typeKey ?: null);
         } catch (Throwable $e) {
             $error = $e->getMessage();
-            Log::error('eduroam.users list failed', ['error' => $e->getMessage()]);
+            Log::error('MyLDAP.users list failed', ['error' => $e->getMessage()]);
         }
 
         $perPage = (int) config('ldap.per_page');
@@ -109,7 +109,7 @@ class UserController extends Controller
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.user updated', [
+        Log::info('MyLDAP.user updated', [
             'uid' => $uid, 'type_from' => $user['type'], 'type_to' => $newType, 'by' => $request->user()?->email,
         ]);
 
@@ -157,7 +157,7 @@ class UserController extends Controller
             $reset['error'] = 'This user has no e-mail address on file.';
         }
 
-        Log::info('eduroam.user password reset', [
+        Log::info('MyLDAP.user password reset', [
             'uid' => $uid, 'type' => $user['type'], 'emailed' => $reset['emailed'], 'by' => $request->user()?->email,
         ]);
 
@@ -174,7 +174,7 @@ class UserController extends Controller
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.user deleted', ['uid' => $uid, 'type' => $user['type'], 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.user deleted', ['uid' => $uid, 'type' => $user['type'], 'by' => $request->user()?->email]);
 
         return back()->with('status', "User {$uid} deleted.");
     }

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'eduroam | Add LDAP user')
+@section('title', 'MyLDAP | Add LDAP user')
 
 @section('content')
 @include('partials.prov-styles')
@@ -17,14 +17,14 @@
         {{-- Left column: help --}}
         <div class="col-lg-5">
             <h1 class="prov-title">Add LDAP user</h1>
-            <p class="prov-lead">Create one eduroam account (student, staff, lecturer or guest) and e-mail the login details to the user.</p>
+            <p class="prov-lead">Create one MyLDAP account (student, staff, lecturer or guest) and e-mail the login details to the user.</p>
 
             <ol class="flow">
                 <li>
                     <span class="n">1</span>
                     <div>
                         <h3>Choose the user type</h3>
-                        <p>The type decides the account's eduroam affiliation. An existing username of a different type is never overwritten.</p>
+                        <p>The type decides the account's MyLDAP affiliation. An existing username of a different type is never overwritten.</p>
                     </div>
                 </li>
                 <li>
@@ -124,7 +124,7 @@
                     </div>
 
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-eduroam">
+                        <button type="submit" class="btn btn-MyLDAP">
                             <span class="btn-text">Create account</span> and send credentials</span>
                             <span class="btn-loading d-none"><span class="spinner-border spinner-border-sm me-2"></span>Working...</span>
                         </button>

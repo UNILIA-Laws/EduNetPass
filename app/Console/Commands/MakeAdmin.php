@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 class MakeAdmin extends Command
 {
-    protected $signature = 'eduroam:make-admin {email} {--name=ICT Admin}';
+    protected $signature = 'MyLDAP:make-admin {email} {--name=ICT Admin}';
     protected $description = 'Create (or reset the password of) a portal login';
 
     public function handle(): int

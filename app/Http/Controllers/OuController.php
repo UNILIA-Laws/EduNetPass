@@ -25,7 +25,7 @@ class OuController extends Controller
             $ous = $this->ldap->listOus();
         } catch (Throwable $e) {
             $error = $e->getMessage();
-            Log::error('eduroam.ous list failed', ['error' => $e->getMessage()]);
+            Log::error('MyLDAP.ous list failed', ['error' => $e->getMessage()]);
         }
 
         return view('ous.index', [
@@ -60,7 +60,7 @@ class OuController extends Controller
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.ou created', ['name' => $data['name'], 'parent' => $data['parent'], 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.ou created', ['name' => $data['name'], 'parent' => $data['parent'], 'by' => $request->user()?->email]);
 
         return back()->with('status', "OU {$data['name']} created.");
     }
@@ -80,7 +80,7 @@ class OuController extends Controller
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.ou deleted', ['dn' => $data['dn'], 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.ou deleted', ['dn' => $data['dn'], 'by' => $request->user()?->email]);
 
         return back()->with('status', 'OU deleted.');
     }

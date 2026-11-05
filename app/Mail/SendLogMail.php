@@ -23,7 +23,7 @@ class SendLogMail extends Mailable
     
     $fullPath = \Illuminate\Support\Facades\Storage::disk('local')->path($this->logFile);
 
-    return $this->subject('Eduroam Bulk Upload Log')
+    return $this->subject('MyLDAP Bulk Upload Log')
                 ->view('emails.log_email')
                 ->attach($fullPath);
 }

@@ -26,7 +26,7 @@ class GroupController extends Controller
             $groups = $this->ldap->listGroups($q);
         } catch (Throwable $e) {
             $error = $e->getMessage();
-            Log::error('eduroam.groups list failed', ['error' => $e->getMessage()]);
+            Log::error('MyLDAP.groups list failed', ['error' => $e->getMessage()]);
         }
 
         return view('groups.index', compact('groups', 'q', 'error'));
@@ -47,7 +47,7 @@ class GroupController extends Controller
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.group created', ['cn' => $data['cn'], 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.group created', ['cn' => $data['cn'], 'by' => $request->user()?->email]);
 
         return redirect()->route('groups.show', $data['cn'])->with('status', 'Group created.');
     }
@@ -91,7 +91,7 @@ class GroupController extends Controller
             return back()->withInput()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.group member added', ['cn' => $cn, 'uid' => $uid, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.group member added', ['cn' => $cn, 'uid' => $uid, 'by' => $request->user()?->email]);
 
         return back()->with('status', "{$uid} added.");
     }
@@ -106,7 +106,7 @@ class GroupController extends Controller
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.group member removed', ['cn' => $cn, 'uid' => $uid, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.group member removed', ['cn' => $cn, 'uid' => $uid, 'by' => $request->user()?->email]);
 
         return back()->with('status', "{$uid} removed.");
     }
@@ -121,7 +121,7 @@ class GroupController extends Controller
             return back()->withErrors(['ldap' => $e->getMessage()]);
         }
 
-        Log::info('eduroam.group deleted', ['cn' => $cn, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.group deleted', ['cn' => $cn, 'by' => $request->user()?->email]);
 
         return redirect()->route('groups.index')->with('status', "Group {$cn} deleted.");
     }

@@ -66,7 +66,7 @@ class LdapSettingsController extends Controller
         try {
             $result = $diagnostics->run();
         } catch (Throwable $e) {
-            Log::error('eduroam.ldap_settings test crashed', ['error' => $e->getMessage()]);
+            Log::error('MyLDAP.ldap_settings test crashed', ['error' => $e->getMessage()]);
             $result = [
                 'ok'        => false,
                 'ms'        => 0,
@@ -76,7 +76,7 @@ class LdapSettingsController extends Controller
         }
 
         // Audit trail: who ran the test and what the outcome was (never the password).
-        Log::info('eduroam.ldap_settings test', [
+        Log::info('MyLDAP.ldap_settings test', [
             'user_id' => $request->user()?->getAuthIdentifier(),
             'ip'      => $request->ip(),
             'ok'      => $result['ok'],

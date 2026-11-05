@@ -6,7 +6,7 @@
         --line: #E3E8F0;
         --surface: #FFFFFF;
         --canvas: #F3F5F9;
-        --accent: var(--eduroam-blue);
+        --accent: var(--MyLDAP-blue);
         --accent-soft: #E8EEF6;
         --ok: #178A5C;      --ok-soft: #E3F5EC;
         --bad: #C93A3A;     --bad-soft: #FCE9E9;
@@ -100,12 +100,12 @@
     }
 
     /* Primary button */
-    .prov .btn-eduroam {
+    .prov .btn-MyLDAP {
         background: var(--accent); color: #fff; border: 0; border-radius: 8px;
         font-size: .9rem; font-weight: 600; padding: .65rem 1rem; box-shadow: none; transition: background .15s;
     }
-    .prov .btn-eduroam:hover { background: #002244; color: #fff; }
-    .prov .btn-eduroam:disabled { background: #6B87A6; opacity: 1; }
+    .prov .btn-MyLDAP:hover { background: #002244; color: #fff; }
+    .prov .btn-MyLDAP:disabled { background: #6B87A6; opacity: 1; }
 
     .notice {
         background: var(--bad-soft); color: #8E2323; border-radius: 8px; padding: .65rem .85rem; font-size: .86rem; margin-bottom: 1rem;

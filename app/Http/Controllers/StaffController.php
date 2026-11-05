@@ -51,7 +51,7 @@ class StaffController extends Controller
         $user->email_verified_at = now();
         $user->save();
 
-        Log::info('eduroam.staff created', ['email' => $user->email, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.staff created', ['email' => $user->email, 'by' => $request->user()?->email]);
 
         return redirect()->route('staff.index')->with('status', "{$user->name} added.");
     }
@@ -94,7 +94,7 @@ class StaffController extends Controller
         }
         $user->save();
 
-        Log::info('eduroam.staff updated', ['id' => $user->id, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.staff updated', ['id' => $user->id, 'by' => $request->user()?->email]);
 
         return redirect()->route('staff.index')->with('status', "{$user->name} updated.");
     }
@@ -110,7 +110,7 @@ class StaffController extends Controller
 
         $user->delete();
 
-        Log::info('eduroam.staff deleted', ['email' => $user->email, 'by' => $request->user()?->email]);
+        Log::info('MyLDAP.staff deleted', ['email' => $user->email, 'by' => $request->user()?->email]);
 
         return back()->with('status', "{$user->name} deleted.");
     }

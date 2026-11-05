@@ -1,7 +1,7 @@
 <p>Dear {{ $student['givenName'] }} {{ $student['sn'] }}@if(!empty($student['Reg'])) ({{ $student['Reg'] }})@endif,</p>
 
 <p>
-    Good news! Your <strong>eduroam</strong> account is ready.
+    Good news! Your <strong>MyLDAP</strong> account is ready.
     You can now use it to connect to the <strong>school Wi-Fi</strong>.
 </p>
 
@@ -12,7 +12,7 @@
 
 <p>
     <strong>Important:</strong>
-    <strong>eduroam is the official way to access the University Wi-Fi</strong>
+    <strong>MyLDAP is the official way to access the University Wi-Fi</strong>
     on campus. Please use these details whenever you want to connect to the school network.
 </p>
 
@@ -23,20 +23,20 @@
 
 <p>
     To help you get connected, please follow the steps in the
-    <strong>eduroam User Guide</strong>. The required
+    <strong>MyLDAP User Guide</strong>. The required
     <strong>UNILIA CA Certificate</strong> is also attached to this email.
 </p>
 
 <p>
     <a href="https://drive.google.com/file/d/1QMoFtIgeQ5BkuOZ9qdEE1jMlTdfMjOTW/view?usp=sharing">
-        Download eduroam User Guide
+        Download MyLDAP User Guide
     </a>
 </p>
 
 <p>
     <strong>CA Certificate:</strong><br>
     Please download the attached <strong>unilia.ac.mw.pem</strong> certificate
-    when configuring eduroam on your device.
+    when configuring MyLDAP on your device.
 </p>
 
 <p>

@@ -19,8 +19,8 @@
 
         ['heading' => 'Administration'],
         ['route' => 'staff.index', 'active' => request()->routeIs('staff.*'),                                          'icon' => 'fa-user-gear',        'label' => 'System users'],
-        ['href' => '#',            'active' => false,                                                                  'icon' => 'fa-clipboard-list',   'label' => 'Audit logs'],
-        ['href' => route('settings.ldap'), 'active' => request()->routeIs('settings.ldap*'), 'icon' => 'fa-server', 'label' => 'LDAP server settings'],
+        ['route' => 'logs.index', 'active' => request()->routeIs('logs.index'), 'icon' => 'fa-clipboard-list', 'label' => 'Audit Logs'],
+        ['route' => 'settings.ldap', 'active' => request()->routeIs('settings.ldap*'), 'icon' => 'fa-server', 'label' => 'LDAP server settings'],
     ];
 @endphp
 

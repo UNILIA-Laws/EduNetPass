@@ -2,26 +2,37 @@
 @section('title', 'MyLDAP | Add staff')
 
 @section('content')
-<div class="container-xl py-4 py-lg-5" style="max-width:820px">
-    <a href="{{ route('staff.index') }}" class="text-decoration-none small text-muted">
-        <i class="fa-solid fa-arrow-left me-1"></i>Back to staff
-    </a>
-    <h1 class="h3 fw-bold mt-2 mb-4">Add staff member</h1>
+@include('partials.usr-style')
 
-    @include('partials.admin-tabs')
+<div class="usr" style="padding:1.25rem 0 1.5rem">
+<div class="container" style="max-width:820px">
 
-    <div class="set-card">
-        <div class="head"><h2><i class="fa-solid fa-user-plus"></i>New account</h2></div>
-        <div class="body">
-            <form action="{{ route('staff.store') }}" method="POST" autocomplete="off">
-                @csrf
-                @include('staff._form')
-                <div class="d-flex justify-content-end gap-2 mt-4">
-                    <a href="{{ route('staff.index') }}" class="btn btn-light">Cancel</a>
-                    <button class="btn btn-MyLDAP px-4"><i class="fa-solid fa-check me-2"></i>Create account</button>
-                </div>
-            </form>
+    @include('users._alerts')
+
+    <div class="usr-head" style="margin-bottom:.8rem">
+        <div>
+            <h1 class="usr-title" style="font-size:1.35rem">Add staff member</h1>
+            <p class="usr-sub">Create a new account that can sign in to MyLDAP.</p>
         </div>
+        <a href="{{ route('staff.index') }}" class="btn-clear"><i class="fa-solid fa-arrow-left me-2"></i>Back to staff</a>
     </div>
+
+    <div class="panel">
+        <div class="panel-head" style="padding:.75rem 1.1rem">
+            <span class="ico"><i class="fa-solid fa-user-plus"></i></span>New account
+        </div>
+        <form action="{{ route('staff.store') }}" method="POST" autocomplete="off">
+            @csrf
+            <div class="panel-body">
+                @include('staff._form')
+            </div>
+            <div class="d-flex justify-content-end gap-2 px-3 py-2" style="border-top:1px solid var(--line);background:#FAFBFD">
+                <a href="{{ route('staff.index') }}" class="btn-clear">Cancel</a>
+                <button class="btn-primary-soft px-4"><i class="fa-solid fa-check me-2"></i>Create account</button>
+            </div>
+        </form>
+    </div>
+
+</div>
 </div>
 @endsection

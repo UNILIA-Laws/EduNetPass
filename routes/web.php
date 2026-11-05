@@ -9,6 +9,7 @@ use App\Http\Controllers\CampusController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\OuController;
 use App\Http\Controllers\LdapSettingsController;
+use App\Http\Controllers\LogController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     // Landing page after login
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+
+    Route::get('/logs', [LogController::class, 'index'])
+        ->name('logs.index');
 
     // Campus management (declared once; the duplicate block and the "'  create'" typo are removed)
     Route::get('/campuses', [CampusController::class, 'index'])->name('campuses.index');

@@ -44,21 +44,28 @@ class DashboardController extends Controller
 
     private function collectStats(): array
     {
-        $norm   = fn (string $s) => strtolower(preg_replace('/\s*,\s*/', ',', trim($s)));
         $counts = $this->ldap->countStudents();
 
         $campuses = [];
-        foreach (config('ldap.campuses') as $key => $c) {
+        $assigned = 0;
+
+     
+        foreach ($this->ldap->campuses() as $key => $c) {
+            $count     = $counts['byCampus'][LdapService::normalizeDn($c['dn'])] ?? 0;
+            $assigned += $count;
+
             $campuses[] = [
                 'key'   => $key,
                 'label' => $c['label'],
-                'count' => $counts['byCampus'][$norm($c['dn'])] ?? 0,
+                'count' => $count,
             ];
         }
 
         return [
             'total'        => $counts['total'],
             'campuses'     => $campuses,
+            'unassigned'   => max(0, $counts['total'] - $assigned),
+            'byType'       => $counts['byType'],
             'capped'       => false,
             'generated_at' => now()->format('H:i'),
         ];

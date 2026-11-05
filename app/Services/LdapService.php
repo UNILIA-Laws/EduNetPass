@@ -15,7 +15,7 @@ class LdapService
     /** @var \LDAP\Connection|null */
     protected $conn = null;
 
-    /** @var array<string,array{label:string,dn:string}>|null per-instance cache */
+    /** @var array<string,array{label:string,dn:string,description:string}>|null per-instance cache */
     protected ?array $campusCache = null;
 
     public function __destruct()
@@ -71,6 +71,15 @@ class LdapService
         return 'uid=' . ldap_escape($uid, '', LDAP_ESCAPE_DN) . ',' . config('ldap.people_dn');
     }
 
+    /**
+     * Normalise a DN for comparison: trim, lower-case, no spaces around commas.
+     * Use this everywhere DNs are compared or used as array keys.
+     */
+    public static function normalizeDn(string $dn): string
+    {
+        return strtolower(preg_replace('/\s*,\s*/', ',', trim($dn)));
+    }
+
     /* ------------------------------------------------------------------
      |  Base DN and campuses (read from the directory)
      * -----------------------------------------------------------------*/
@@ -93,10 +102,9 @@ class LdapService
 
     /**
      * Campuses = the organizationalUnit entries directly under campusesDn().
-     * Same shape the old config had, so views keep working:
-     * key (lower-case ou name) => ['label' => 'Ekwendeni', 'dn' => 'ou=ekwendeni,ou=campuses,...']
+     * key (lower-case ou name) => ['label' => 'Ekwendeni Campus', 'dn' => 'ou=ekwendeni,ou=campuses,...', 'description' => '...']
      *
-     * @return array<string,array{label:string,dn:string}> sorted by label
+     * @return array<string,array{label:string,dn:string,description:string}> sorted by label
      */
     public function campuses(): array
     {
@@ -125,8 +133,8 @@ class LdapService
                 continue;
             }
             $campuses[strtolower($ou)] = [
-                'label' => ucwords(str_replace(['-', '_'], ' ', $ou)) . (string) config('ldap.campus_label_suffix', ''),
-                'dn'    => $entries[$i]['dn'],
+                'label'       => ucwords(str_replace(['-', '_'], ' ', $ou)) . (string) config('ldap.campus_label_suffix', ''),
+                'dn'          => $entries[$i]['dn'],
                 'description' => $entries[$i]['description'][0] ?? '',
             ];
         }
@@ -380,14 +388,14 @@ class LdapService
      * Count users in a single paged pass.
      *
      * @return array{total:int, byCampus:array<string,int>, byType:array<string,int>}
-     *         byCampus is keyed by normalised campus DN; byType by user-type key
-     *         (users that match no configured type are counted under 'other').
+     *         byCampus is keyed by normalised campus DN (see normalizeDn());
+     *         byType by user-type key (users that match no configured type
+     *         are counted under 'other').
      */
     public function countStudents(): array
     {
         $this->ensureConnected();
 
-        $norm     = fn (string $s) => strtolower(preg_replace('/\s*,\s*/', ',', trim($s)));
         $total    = 0;
         $byCampus = [];
         $byType   = [];
@@ -409,7 +417,7 @@ class LdapService
             for ($i = 0; $i < $entries['count']; $i++) {
                 $total++;
 
-                $dn            = $norm($entries[$i]['edupersonorgunitdn'][0] ?? '');
+                $dn            = self::normalizeDn($entries[$i]['edupersonorgunitdn'][0] ?? '');
                 $byCampus[$dn] = ($byCampus[$dn] ?? 0) + 1;
 
                 $type          = $this->typeFromAffiliations($this->affiliationsOf($entries[$i])) ?? 'other';
@@ -449,15 +457,14 @@ class LdapService
             'mail'         => $get('mail'),
             'campusDn'     => $get('edupersonorgunitdn'),
             'affiliations' => $aff,
-            'affiliation'  => $aff[0] ?? '',   // kept for existing views
+            'affiliation'  => $aff[0] ?? '',   
             'type'         => $this->typeFromAffiliations($aff),
         ];
     }
 
     private function sameDn(string $a, string $b): bool
     {
-        $norm = fn (string $s) => strtolower(preg_replace('/\s*,\s*/', ',', trim($s)));
-        return $norm($a) === $norm($b);
+        return self::normalizeDn($a) === self::normalizeDn($b);
     }
 
     /** Salted SHA-1 ({SSHA}). */
